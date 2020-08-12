@@ -5,7 +5,7 @@ import com.anatawa12.decompiler.instructions.ShiftOp
 import com.anatawa12.decompiler.statementsGen.*
 
 class PrintingProcessor(private val firstLine: String = "", val showDetailed: Boolean) : IProcessor {
-    override fun process(method: StatementsMethod) {
+    override fun process(method: StatementsMethod, ctx: ProcessorContext) {
         for ((name, descriptor, signature, start, end, index) in method.localVariables) {
             print("// #")
             print(index)

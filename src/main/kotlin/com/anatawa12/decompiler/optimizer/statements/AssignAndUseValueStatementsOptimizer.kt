@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import kotlinx.collections.immutable.mutate
 
@@ -14,7 +15,7 @@ import kotlinx.collections.immutable.mutate
  * stk0: one produce, two consume
  */
 object AssignAndUseValueStatementsOptimizer : IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (stat in statements) {
             val assign1 = stat[0].exp() as? Assign ?: continue
             val assign2 = stat[1].exp() as? Assign ?: continue

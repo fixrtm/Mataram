@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 
 /**
@@ -10,7 +11,7 @@ import com.anatawa12.decompiler.statementsGen.*
  */
 object MakeCatchBlockStartSetsLocalVariableStatementsOptimizer :
         IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         root@ for (statement in statements) {
             val catchBlockStarts = mutableListOf<CatchBlockStart>()
             var cur = statement

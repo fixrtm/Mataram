@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
 import kotlinx.collections.immutable.mutate
@@ -12,7 +13,7 @@ import kotlinx.collections.immutable.mutate
  * someExpression(stk2)
  */
 object SingleConsumerSingleProducerStackValueFromStackVariableStatementsOptimizer : IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         root@ for (statement1 in statements) {
             val statement = statement1.exp() as? Assign ?: continue@root
             val stk1 = statement.variable as? StackVariable ?: continue@root

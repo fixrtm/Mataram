@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import kotlinx.collections.immutable.persistentListOf
 
@@ -18,7 +19,7 @@ import kotlinx.collections.immutable.persistentListOf
  */
 object NewArrayWithInitializerStatementsOptimizer :
         IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         root@ for (statement in statements) {
             val assign1 = statement[0].exp() as? Assign ?: continue@root
             val newArray = assign1.value as? NewArray ?: continue@root

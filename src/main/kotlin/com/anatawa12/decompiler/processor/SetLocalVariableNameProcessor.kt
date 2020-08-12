@@ -5,7 +5,7 @@ import com.anatawa12.decompiler.statementsGen.*
 class SetLocalVariableNameProcessor : IProcessor {
     private val wasLabel = mutableSetOf<StatLabel>()
 
-    override fun process(method: StatementsMethod) {
+    override fun process(method: StatementsMethod, ctx: ProcessorContext) {
         for (statement in method.beginStatement) {
             wasLabel += statement.labelsTargetsMe
             for (local in getAllLocalVariable(statement)) {

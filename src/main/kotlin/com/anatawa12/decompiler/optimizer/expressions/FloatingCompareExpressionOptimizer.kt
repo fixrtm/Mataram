@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.expressions
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
 
@@ -9,7 +10,7 @@ import com.anatawa12.decompiler.util.Property
  * value1 cmp value2
  */
 object FloatingCompareExpressionOptimizer : IExpressionOptimizer {
-    override fun optimize(expr: Property<out Value, *>): Boolean {
+    override fun optimize(expr: Property<out Value, *>, ctx: ProcessorContext): Boolean {
         val setterCondition = expr.castInAs<ConditionValue>() ?: return false
         val setterBooleanNot = expr.castInAs<BooleanNotValue>() ?: return false
         val compare = expr.value as? ConditionValue ?: return false

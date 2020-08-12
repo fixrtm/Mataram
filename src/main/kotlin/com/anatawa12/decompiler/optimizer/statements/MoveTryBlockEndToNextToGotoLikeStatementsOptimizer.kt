@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 
 /**
@@ -17,7 +18,7 @@ import com.anatawa12.decompiler.statementsGen.*
  */
 object MoveTryBlockEndToNextToGotoLikeStatementsOptimizer :
         IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val tryBlockEnd = statement as? TryBlockEnd ?: continue
             val gotoLike = when (val next = tryBlockEnd.next) {

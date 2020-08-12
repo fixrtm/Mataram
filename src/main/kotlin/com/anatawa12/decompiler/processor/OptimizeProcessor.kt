@@ -11,17 +11,17 @@ class OptimizeProcessor(
         private val statementOptimizer: List<IStatementsOptimizer>,
         private val expressionOptimizer: List<IExpressionOptimizer>,
 ) : IProcessor {
-    override fun process(method: StatementsMethod) {
+    override fun process(method: StatementsMethod, ctx: ProcessorContext) {
         while (true) {
-            val modified = doOptimize(method.beginStatement)
+            val modified = doOptimize(method.beginStatement, ctx)
             if (!modified)
                 break
         }
     }
 
-    private fun doOptimize(statements: Iterable<Statement>): Boolean {
+    private fun doOptimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (optimizer in statementOptimizer) {
-            val modified = optimizer.optimize(statements)
+            val modified = optimizer.optimize(statements, ctx)
             if (modified)
                 return true
         }
@@ -31,35 +31,35 @@ class OptimizeProcessor(
         var modified = false
         for (statement in statements) {
             for (produce in statement.produces) {
-                if (optimize(produce)) modified = true
+                if (optimize(produce, ctx)) modified = true
             }
             for (consume in statement.consumes) {
-                if (optimize(consume)) modified = true
+                if (optimize(consume, ctx)) modified = true
             }
         }
         return modified
     }
 
-    private fun optimize(expr: Property<out Value, *>): Boolean {
+    private fun optimize(expr: Property<out Value, *>, ctx: ProcessorContext): Boolean {
         var modified = false
         while (true) {
-            if (doOptimize(expr)) modified = true
+            if (doOptimize(expr, ctx)) modified = true
             else break
         }
         val exp = expr.value
 
         for (produce in exp.produces) {
-            if (optimize(produce)) modified = true
+            if (optimize(produce, ctx)) modified = true
         }
         for (consume in exp.consumes) {
-            if (optimize(consume)) modified = true
+            if (optimize(consume, ctx)) modified = true
         }
         return modified
     }
 
-    private fun doOptimize(expr: Property<out Value, *>): Boolean {
+    private fun doOptimize(expr: Property<out Value, *>, ctx: ProcessorContext): Boolean {
         for (optimizer in expressionOptimizer) {
-            val modified = optimizer.optimize(expr)
+            val modified = optimizer.optimize(expr, ctx)
             if (modified)
                 return true
         }

@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.expressions
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
 import org.objectweb.asm.Type
@@ -15,7 +16,7 @@ import org.objectweb.asm.Type
  * booleanExp
  */
 object EqOrNeToZeroWithBoolOptimizer : IExpressionOptimizer {
-    override fun optimize(expr: Property<out Value, *>): Boolean {
+    override fun optimize(expr: Property<out Value, *>, ctx: ProcessorContext): Boolean {
         val eq = expr.value as? ConditionValue ?: return false
         val boolExp = eq.left
         val zero = eq.right as? ConstantValue ?: return false

@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import kotlinx.collections.immutable.mutate
 
@@ -11,7 +12,7 @@ import kotlinx.collections.immutable.mutate
  */
 object GetStaticWithSelfStatementsOptimizer :
         IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val assign1 = statement[0].exp() as? Assign ?: continue
             val assign2 = statement[1].exp() as? Assign ?: continue

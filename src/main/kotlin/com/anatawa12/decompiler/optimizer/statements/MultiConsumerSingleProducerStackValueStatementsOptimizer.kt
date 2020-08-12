@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
 
@@ -22,7 +23,7 @@ import com.anatawa12.decompiler.util.Property
  * ...
  */
 object MultiConsumerSingleProducerStackValueStatementsOptimizer : IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement1 in statements) {
             val assign = statement1.exp() as? Assign ?: continue
             val stk1 = assign.variable as? StackVariable ?: continue

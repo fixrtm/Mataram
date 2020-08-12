@@ -1,6 +1,7 @@
 package com.anatawa12.decompiler.optimizer.expressions
 
 import com.anatawa12.decompiler.instructions.StackType
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
 
@@ -26,7 +27,7 @@ import com.anatawa12.decompiler.util.Property
  *   -> object invertedCompare object
  */
 object DeMorganExpressionOptimizer : IExpressionOptimizer {
-    override fun optimize(expr: Property<out Value, *>): Boolean {
+    override fun optimize(expr: Property<out Value, *>, ctx: ProcessorContext): Boolean {
         val setter = expr.castInAs<Value>() ?: return false
         val notExpr = expr.value as? BooleanNotValue ?: return false
         val eiExpr = notExpr.value

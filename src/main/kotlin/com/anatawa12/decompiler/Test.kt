@@ -5,6 +5,7 @@ import com.anatawa12.decompiler.optimizer.expressions.*
 import com.anatawa12.decompiler.optimizer.statements.*
 import com.anatawa12.decompiler.processor.OptimizeProcessor
 import com.anatawa12.decompiler.processor.PrintingProcessor
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.processor.SetLocalVariableNameProcessor
 import com.anatawa12.decompiler.statementsGen.StatementsGenerator
 import com.anatawa12.decompiler.statementsGen.StatementsMethod
@@ -16,6 +17,9 @@ import java.util.zip.ZipFile
 
 fun main(args: Array<String>) {
     require(args.isNotEmpty())
+
+    val ctx = ProcessorContext()
+
     val methods = mutableListOf<StatementsMethod>()
     for (arg in args) {
         val argFile = File(arg)
@@ -26,28 +30,28 @@ fun main(args: Array<String>) {
                 val entry = entries.nextElement()
                 if (entry.isDirectory) continue
                 if (!entry.name.endsWith(".class")) continue
-                methods += generateForClass(zip.getInputStream(entry).readBytes())
+                methods += generateForClass(zip.getInputStream(entry).readBytes(), ctx)
             }
         } else {
             for (file in argFile.walkTopDown()) {
                 if (!file.isFile) continue
-                methods += generateForClass(file.readBytes())
+                methods += generateForClass(file.readBytes(), ctx)
             }
         }
     }
 }
 
-fun generateForClass(byteArray: ByteArray): List<StatementsMethod> {
+fun generateForClass(byteArray: ByteArray, ctx: ProcessorContext): List<StatementsMethod> {
     val node = ClassNode()
     ClassReader(byteArray).accept(node, 0)
-    return generateForClassNode(node)
+    return generateForClassNode(node, ctx)
 }
 
-fun generateForClassNode(node: ClassNode) = node.methods.map {
-    generateForMethodNode(node, it)
+fun generateForClassNode(node: ClassNode, ctx: ProcessorContext) = node.methods.map {
+    generateForMethodNode(node, it, ctx)
 }
 
-fun generateForMethodNode(node: ClassNode, method: MethodNode): StatementsMethod {
+fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorContext): StatementsMethod {
     val generator = StatementsGenerator()
     val convertor = InstructionConvertor(node.name, method.access, method.name, method.desc, generator)
 
@@ -108,8 +112,9 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode): StatementsMethod
     )
 
     val statementsMethod = generator.getStatementsMethod()
+
     for (processor in processors) {
-        processor.process(statementsMethod)
+        processor.process(statementsMethod, ctx)
     }
 
     return statementsMethod

@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.expressions
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
 
@@ -9,7 +10,7 @@ import com.anatawa12.decompiler.util.Property
  * variable1 op= value1
  */
 object ShiftOperationAssignExpressionOptimizer : IExpressionOptimizer {
-    override fun optimize(expr: Property<out Value, *>): Boolean {
+    override fun optimize(expr: Property<out Value, *>, ctx: ProcessorContext): Boolean {
         val biOpAssignProp = expr.castInAs<ShiftOperationAssignedValue>() ?: return false
         val assign = expr.value as? Assign ?: return false
         val shift = assign.value as? ShiftOperation ?: return false

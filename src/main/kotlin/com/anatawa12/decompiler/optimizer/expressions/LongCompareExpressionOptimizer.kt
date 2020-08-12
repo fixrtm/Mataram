@@ -1,10 +1,11 @@
 package com.anatawa12.decompiler.optimizer.expressions
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
 
 object LongCompareExpressionOptimizer : IExpressionOptimizer {
-    override fun optimize(expr: Property<out Value, *>): Boolean {
+    override fun optimize(expr: Property<out Value, *>, ctx: ProcessorContext): Boolean {
         val setter = expr.castInAs<ConditionValue>() ?: return false
         val compare = expr.value as? ConditionValue ?: return false
         val longComp = compare.left as? LongCompare ?: return false

@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.optimizer.statements
 
+import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.BooleanOrOrOperation
 import com.anatawa12.decompiler.statementsGen.ConditionalGoto
 import com.anatawa12.decompiler.statementsGen.Statement
@@ -14,7 +15,7 @@ import kotlinx.collections.immutable.mutate
  */
 object BooleanOrOrOperationStatementsOptimizer :
         IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>): Boolean {
+    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val conditionalGoto1 = statement as? ConditionalGoto ?: continue
             val conditionalGoto2 = conditionalGoto1.next as? ConditionalGoto ?: continue
