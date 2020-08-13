@@ -38,5 +38,10 @@ internal class SClassLoaderTest : StringSpec() {
             fields.single { it.name == "PRIVATE" }.type shouldBe environment.intType
             fields.single { it.name == "PRIVATE" }.constantValue shouldBe Modifier.PRIVATE
         }
+        "isPrimitive" {
+            environment.intType.isPrimitive shouldBe true
+            environment.intType.arrayClass.isPrimitive shouldBe false
+            environment.systemClassLoader.loadClass("java.lang.String").isPrimitive shouldBe false
+        }
     }
 }

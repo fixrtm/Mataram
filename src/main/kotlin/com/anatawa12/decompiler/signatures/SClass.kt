@@ -35,7 +35,7 @@ class SClass {
                 superName: String?,
                 interfaces: Array<out String>?,
             ) {
-                theName = name;
+                theName = name
                 superclass = superName?.let { environment.forNameOrNull(classLoader, it) }
                 interfacesList = interfaces?.mapNotNull { environment.forNameOrNull(classLoader, it) }.orEmpty()
             }
@@ -108,7 +108,7 @@ class SClass {
 
     val isInterface get() = flags and INTERFACE != 0
     val isImmutableList get() = descriptor[0] == '['
-    val isPrimitive get() = descriptor[0] == '[' && descriptor[0] == 'L'
+    val isPrimitive get() = descriptor[0] != '[' && descriptor[0] != 'L'
     val isAnnotation get() = flags and ANNOTATION != 0
     val isSynthetic get() = flags and SYNTHETIC != 0
 
