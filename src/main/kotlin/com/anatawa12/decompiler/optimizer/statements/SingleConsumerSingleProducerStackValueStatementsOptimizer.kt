@@ -27,9 +27,9 @@ object SingleConsumerSingleProducerStackValueStatementsOptimizer : IStatementsOp
             if (identifier.consumerExpressions.isNotEmpty()) {
                 val consumer = identifier.consumerExpressions.single()
                 rootStat =
-                        rootStatementOf(
-                                consumer.thisRef
-                        )
+                    rootStatementOf(
+                        consumer.thisRef
+                    )
                 prop = consumer.castInAs() ?: continue
             } else {
                 val consumer = identifier.consumerStatements.single()
@@ -55,19 +55,19 @@ object SingleConsumerSingleProducerStackValueStatementsOptimizer : IStatementsOp
     private fun rootStatementOf(exp: Value): Statement {
         if (exp is ExpressionValue)
             return exp.consumerStatement?.thisRef ?: rootStatementOf(
-                    exp.consumer!!.thisRef
+                exp.consumer!!.thisRef
             )
         if (exp is ExpressionVariable)
             return exp.consumerStatement?.thisRef
-                    ?: exp.producer as? Statement
-                    ?: exp.producer.let { it as? Value }?.let {
-                        rootStatementOf(
-                                it
-                        )
-                    }
-                    ?: rootStatementOf(
-                            exp.consumer!!.thisRef
+                ?: exp.producer as? Statement
+                ?: exp.producer.let { it as? Value }?.let {
+                    rootStatementOf(
+                        it
                     )
+                }
+                ?: rootStatementOf(
+                    exp.consumer!!.thisRef
+                )
         error("cannot get root statement of $exp")
     }
 }

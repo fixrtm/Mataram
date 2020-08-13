@@ -14,7 +14,7 @@ import kotlinx.collections.immutable.mutate
  * goto L1 if condition1 || condition2
  */
 object BooleanOrOrOperationStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val conditionalGoto1 = statement as? ConditionalGoto ?: continue
@@ -32,13 +32,14 @@ object BooleanOrOrOperationStatementsOptimizer :
             val condition1 = conditionalGoto1.value
             val condition2 = conditionalGoto2.value
             val andAnd = BooleanOrOrOperation(
-                    left = TemporaryExpressionValue,
-                    right = TemporaryExpressionValue,
+                left = TemporaryExpressionValue,
+                right = TemporaryExpressionValue,
             )
             conditionalGoto2.value = andAnd
             andAnd.left = condition1
             andAnd.right = condition2
-            conditionalGoto2.labelsTargetsMe = conditionalGoto1.labelsTargetsMe.mutate { it.addAll(conditionalGoto2.labelsTargetsMe) }
+            conditionalGoto2.labelsTargetsMe =
+                conditionalGoto1.labelsTargetsMe.mutate { it.addAll(conditionalGoto2.labelsTargetsMe) }
             conditionalGoto1.label.usedBy.remove(conditionalGoto1)
 
             return true

@@ -248,8 +248,8 @@ class Ret(val variable: LocalVariable) : Statement() {
     }
 }
 
-class TableSwitch(val min: Int, val max: Int, val default: StatLabel, val labels: List<StatLabel>, value: Value)
-    : Statement(), IStatLabelConsumer {
+class TableSwitch(val min: Int, val max: Int, val default: StatLabel, val labels: List<StatLabel>, value: Value) :
+    Statement(), IStatLabelConsumer {
     var value by prop(value)
 
     init {
@@ -284,7 +284,8 @@ class TableSwitch(val min: Int, val max: Int, val default: StatLabel, val labels
     override fun toString() = "TableSwitch(min=$min, max=$max, default=$default, labels=$labels, value=$value)"
 }
 
-class LookupSwitch(val default: StatLabel, val pairs: List<Pair<Int, StatLabel>>, value: Value) : Statement(), IStatLabelConsumer {
+class LookupSwitch(val default: StatLabel, val pairs: List<Pair<Int, StatLabel>>, value: Value) : Statement(),
+    IStatLabelConsumer {
     var value by prop(value)
 
     init {
@@ -352,12 +353,12 @@ class ReturnVoid() : Statement() {
 }
 
 class InvokeVirtualVoid(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        self: Value,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    self: Value,
+    args: List<Value>
 ) : Statement() {
     var self by prop(self)
     val argProps = args.map(::prop)
@@ -395,12 +396,12 @@ class InvokeVirtualVoid(
 }
 
 class InvokeSpecialVoid(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        self: Value,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    self: Value,
+    args: List<Value>
 ) : Statement() {
     var self by prop(self)
     val argProps = args.map(::prop)
@@ -438,11 +439,11 @@ class InvokeSpecialVoid(
 }
 
 class InvokeStaticVoid(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    args: List<Value>
 ) : Statement() {
     val argProps = args.map(::prop)
     var args = PropertyList(this, argProps)
@@ -477,7 +478,7 @@ class InvokeStaticVoid(
 }
 
 class InvokeInterfaceVoid(val owner: String, val name: String, val desc: String, self: Value, args: List<Value>) :
-        Statement() {
+    Statement() {
     var self by prop(self)
     val argProps = args.map(::prop)
     var args = PropertyList(this, argProps)
@@ -512,11 +513,11 @@ class InvokeInterfaceVoid(val owner: String, val name: String, val desc: String,
 }
 
 class InvokeDynamicVoid(
-        val name: String,
-        val descriptor: String,
-        val bootstrapMethodHandle: Handle,
-        val bootstrapMethodArguments: List<Any>,
-        args: List<Value>,
+    val name: String,
+    val descriptor: String,
+    val bootstrapMethodHandle: Handle,
+    val bootstrapMethodArguments: List<Any>,
+    args: List<Value>,
 ) : Statement() {
     val argProps = args.map(::prop)
     var args = PropertyList(this, argProps)
@@ -695,8 +696,8 @@ class TryBlockEnd(val identifier: TryCatchBlockIdentifier) : Statement() {
 }
 
 class CatchBlockStart(
-        val identifier: TryCatchBlockIdentifier,
-        catchVariable: IdentifierVariable<*, *, in CatchBlockStart>,
+    val identifier: TryCatchBlockIdentifier,
+    catchVariable: IdentifierVariable<*, *, in CatchBlockStart>,
 ) : Statement(), IStackProducer {
     var catchVariable by mutatingProp(catchVariable, consumes = false)
 
@@ -733,12 +734,12 @@ class CatchBlockStart(
 /////////// java expression 
 
 class InvokeStaticWithSelfVoid(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        self: Value,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    self: Value,
+    args: List<Value>
 ) : Statement() {
     var self by prop(self)
     val argProps = args.map(::prop)

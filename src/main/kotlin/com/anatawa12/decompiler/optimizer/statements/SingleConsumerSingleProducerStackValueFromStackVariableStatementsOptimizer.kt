@@ -63,9 +63,9 @@ object SingleConsumerSingleProducerStackValueFromStackVariableStatementsOptimize
             return exp.consumerStatement?.thisRef ?: rootStatementOf(exp.consumer!!.thisRef)
         if (exp is ExpressionVariable)
             return exp.consumerStatement?.thisRef
-                    ?: exp.producer as? Statement
-                    ?: exp.producer.let { it as? Value }?.let(::rootStatementOf)
-                    ?: rootStatementOf(exp.consumer!!.thisRef)
+                ?: exp.producer as? Statement
+                ?: exp.producer.let { it as? Value }?.let(::rootStatementOf)
+                ?: rootStatementOf(exp.consumer!!.thisRef)
         error("cannot get root statement of $exp")
     }
 }

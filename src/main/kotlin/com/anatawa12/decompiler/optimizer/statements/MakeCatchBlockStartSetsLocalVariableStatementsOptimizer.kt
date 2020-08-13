@@ -10,7 +10,7 @@ import com.anatawa12.decompiler.statementsGen.*
  * CatchBlockStart(var1) type identifier
  */
 object MakeCatchBlockStartSetsLocalVariableStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         root@ for (statement in statements) {
             val catchBlockStarts = mutableListOf<CatchBlockStart>()

@@ -12,7 +12,7 @@ import kotlinx.collections.immutable.mutate
  * stk1 = ++--var1
  */
 object PrefixLocalInDecrementStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val assign1 = statement[0].exp() as? Assign ?: continue

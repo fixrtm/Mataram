@@ -18,7 +18,7 @@ import kotlinx.collections.immutable.persistentListOf
  * stkN = newArray type[] { value0, value2, ..., valueN-1 }
  */
 object NewArrayWithInitializerStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         root@ for (statement in statements) {
             val assign1 = statement[0].exp() as? Assign ?: continue@root
@@ -60,14 +60,16 @@ object NewArrayWithInitializerStatementsOptimizer :
                 stat.mainStat.removeMe()
             }
 
-            val assign = Assign(lastValue, NewArrayWithInitializerValue(
+            val assign = Assign(
+                lastValue, NewArrayWithInitializerValue(
                     elementType = newArray.element,
                     arrayInitializer = variables
-            ))
+                )
+            )
             lastStat.mainStat.next.insertPrev(assign.stat())
 
             assign.mainStat.labelsTargetsMe =
-                    stats.flatMapTo(persistentListOf<StatLabel>().builder()) { it.mainStat.labelsTargetsMe }.build()
+                stats.flatMapTo(persistentListOf<StatLabel>().builder()) { it.mainStat.labelsTargetsMe }.build()
 
             return true
         }

@@ -24,12 +24,18 @@ object FloatingCompareExpressionOptimizer : IExpressionOptimizer {
                 floatComp.dispose()
                 zero.dispose()
                 when (compare.condition) {
-                    BiCondition.EQ -> setterCondition.value = ConditionValue(BiCondition.EQ, floatComp.left, floatComp.right)
-                    BiCondition.NE -> setterCondition.value = ConditionValue(BiCondition.NE, floatComp.left, floatComp.right)
-                    BiCondition.LE -> setterCondition.value = ConditionValue(BiCondition.LE, floatComp.left, floatComp.right)
-                    BiCondition.LT -> setterCondition.value = ConditionValue(BiCondition.LT, floatComp.left, floatComp.right)
-                    BiCondition.GE -> setterBooleanNot.value = BooleanNotValue(ConditionValue(BiCondition.LT, floatComp.left, floatComp.right))
-                    BiCondition.GT -> setterBooleanNot.value = BooleanNotValue(ConditionValue(BiCondition.LE, floatComp.left, floatComp.right))
+                    BiCondition.EQ -> setterCondition.value =
+                        ConditionValue(BiCondition.EQ, floatComp.left, floatComp.right)
+                    BiCondition.NE -> setterCondition.value =
+                        ConditionValue(BiCondition.NE, floatComp.left, floatComp.right)
+                    BiCondition.LE -> setterCondition.value =
+                        ConditionValue(BiCondition.LE, floatComp.left, floatComp.right)
+                    BiCondition.LT -> setterCondition.value =
+                        ConditionValue(BiCondition.LT, floatComp.left, floatComp.right)
+                    BiCondition.GE -> setterBooleanNot.value =
+                        BooleanNotValue(ConditionValue(BiCondition.LT, floatComp.left, floatComp.right))
+                    BiCondition.GT -> setterBooleanNot.value =
+                        BooleanNotValue(ConditionValue(BiCondition.LE, floatComp.left, floatComp.right))
                 }
                 return true
             }
@@ -38,12 +44,18 @@ object FloatingCompareExpressionOptimizer : IExpressionOptimizer {
                 floatComp.dispose()
                 zero.dispose()
                 when (compare.condition) {
-                    BiCondition.EQ -> setterCondition.value = ConditionValue(BiCondition.EQ, floatComp.left, floatComp.right)
-                    BiCondition.NE -> setterCondition.value = ConditionValue(BiCondition.NE, floatComp.left, floatComp.right)
-                    BiCondition.GE -> setterCondition.value = ConditionValue(BiCondition.GE, floatComp.left, floatComp.right)
-                    BiCondition.GT -> setterCondition.value = ConditionValue(BiCondition.GT, floatComp.left, floatComp.right)
-                    BiCondition.LE -> setterBooleanNot.value = BooleanNotValue(ConditionValue(BiCondition.GT, floatComp.left, floatComp.right))
-                    BiCondition.LT -> setterBooleanNot.value = BooleanNotValue(ConditionValue(BiCondition.GE, floatComp.left, floatComp.right))
+                    BiCondition.EQ -> setterCondition.value =
+                        ConditionValue(BiCondition.EQ, floatComp.left, floatComp.right)
+                    BiCondition.NE -> setterCondition.value =
+                        ConditionValue(BiCondition.NE, floatComp.left, floatComp.right)
+                    BiCondition.GE -> setterCondition.value =
+                        ConditionValue(BiCondition.GE, floatComp.left, floatComp.right)
+                    BiCondition.GT -> setterCondition.value =
+                        ConditionValue(BiCondition.GT, floatComp.left, floatComp.right)
+                    BiCondition.LE -> setterBooleanNot.value =
+                        BooleanNotValue(ConditionValue(BiCondition.GT, floatComp.left, floatComp.right))
+                    BiCondition.LT -> setterBooleanNot.value =
+                        BooleanNotValue(ConditionValue(BiCondition.GE, floatComp.left, floatComp.right))
                 }
                 return true
             }

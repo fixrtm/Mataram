@@ -57,7 +57,7 @@ object NewObjectStatementsOptimizer : IStatementsOptimizer {
  * stk2 = new LType1;(arguments)
  */
 object NewObjectStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val newObjAssign = statement[0].exp() as? Assign ?: continue
@@ -82,7 +82,10 @@ object NewObjectStatementsOptimizer :
             setToStackAssign.mainStat.removeMe()
             invokeSpecialVoid.removeMe()
 
-            val assign = Assign(stk2, NewAndCallConstructor(invokeSpecialVoid.owner, invokeSpecialVoid.desc, invokeSpecialVoid.args))
+            val assign = Assign(
+                stk2,
+                NewAndCallConstructor(invokeSpecialVoid.owner, invokeSpecialVoid.desc, invokeSpecialVoid.args)
+            )
 
             invokeSpecialVoid.next.insertPrev(assign.stat())
             assign.mainStat.labelsTargetsMe = persistentListOf<StatLabel>().mutate {

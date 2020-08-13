@@ -18,7 +18,7 @@ import kotlinx.collections.immutable.persistentListOf
  * stk0: one produce, two consume
  */
 object ConditionalOperatorStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val conditionalGoto = statement[0] as? ConditionalGoto ?: continue
@@ -44,11 +44,13 @@ object ConditionalOperatorStatementsOptimizer :
             goto.removeMe()
             assignTrue.mainStat.removeMe()
 
-            val assign = Assign(stk10, ConditionalOperatorValue(
+            val assign = Assign(
+                stk10, ConditionalOperatorValue(
                     condition = BooleanNotValue(conditionalGoto.value),
                     ifTrue = value1,
                     ifFalse = value2,
-            ))
+                )
+            )
 
             next.insertPrev(assign.stat())
 

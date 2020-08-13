@@ -88,8 +88,9 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
     val convertor = InstructionConvertor(node.name, method.access, method.name, method.desc, generator)
 
     if (node.name == "jp/ngt/ngtlib/event/TickProcessQueue\$DelayProcessEntry"
-            && method.name == "process"
-            && method.desc == "(Lnet/minecraft/world/World;)Z") {
+        && method.name == "process"
+        && method.desc == "(Lnet/minecraft/world/World;)Z"
+    ) {
         print("")
     }
     method.accept(convertor)
@@ -97,50 +98,50 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
     println("/// method: ${node.name}.${method.name}:${method.desc}")
 
     val statementOptimizer = listOf(
-            GetStaticWithSelfStatementsOptimizer,
-            InvokeStaticValueWithSelfStatementsOptimizer,
-            InvokeStaticVoidWithSelfStatementsOptimizer,
+        GetStaticWithSelfStatementsOptimizer,
+        InvokeStaticValueWithSelfStatementsOptimizer,
+        InvokeStaticVoidWithSelfStatementsOptimizer,
 
-            NullCheckedValueStatementsOptimizer,
+        NullCheckedValueStatementsOptimizer,
 
-            SuffixInDecrementStatementsOptimizer,
-            SuffixInDecrementWithIIncStatementsOptimizer,
-            PrefixLocalInDecrementStatementsOptimizer,
+        SuffixInDecrementStatementsOptimizer,
+        SuffixInDecrementWithIIncStatementsOptimizer,
+        PrefixLocalInDecrementStatementsOptimizer,
 
-            NewObjectStatementsOptimizer,
+        NewObjectStatementsOptimizer,
 
-            AssignAndUseValueToLocalStatementsOptimizer,
-            AssignAndUseValueStatementsOptimizer,
+        AssignAndUseValueToLocalStatementsOptimizer,
+        AssignAndUseValueStatementsOptimizer,
 
-            BooleanAndAndOperationStatementsOptimizer,
-            MakeCatchBlockStartSetsLocalVariableStatementsOptimizer,
-            ConditionalOperatorStatementsOptimizer,
-            ConditionalOperatorAfterGotoStatementsOptimizer,
-            BooleanOrOrOperationStatementsOptimizer,
-            MoveTryBlockEndToNextToGotoLikeStatementsOptimizer,
-            NewArrayWithInitializerStatementsOptimizer,
+        BooleanAndAndOperationStatementsOptimizer,
+        MakeCatchBlockStartSetsLocalVariableStatementsOptimizer,
+        ConditionalOperatorStatementsOptimizer,
+        ConditionalOperatorAfterGotoStatementsOptimizer,
+        BooleanOrOrOperationStatementsOptimizer,
+        MoveTryBlockEndToNextToGotoLikeStatementsOptimizer,
+        NewArrayWithInitializerStatementsOptimizer,
 
-            SingleConsumerSingleProducerStackValueStatementsOptimizer,
-            SingleConsumerSingleProducerStackValueFromStackVariableStatementsOptimizer,
-            MultiConsumerSingleProducerStackValueStatementsOptimizer
+        SingleConsumerSingleProducerStackValueStatementsOptimizer,
+        SingleConsumerSingleProducerStackValueFromStackVariableStatementsOptimizer,
+        MultiConsumerSingleProducerStackValueStatementsOptimizer
     )
 
     val expressionOptimizer = listOf<IExpressionOptimizer>(
-            BiOperationAssignExpressionOptimizer,
-            ShiftOperationAssignExpressionOptimizer,
+        BiOperationAssignExpressionOptimizer,
+        ShiftOperationAssignExpressionOptimizer,
 
-            EqOrNeToZeroWithBoolOptimizer,
+        EqOrNeToZeroWithBoolOptimizer,
 
-            FloatingCompareExpressionOptimizer,
-            LongCompareExpressionOptimizer,
+        FloatingCompareExpressionOptimizer,
+        LongCompareExpressionOptimizer,
 
-            DeMorganExpressionOptimizer
+        DeMorganExpressionOptimizer
     )
 // 3546 -> 2052
     val processors = listOf(
-            SetLocalVariableNameProcessor(),
-            OptimizeProcessor(statementOptimizer, expressionOptimizer),
-            PrintingProcessor("// optimized", showDetailed = false),
+        SetLocalVariableNameProcessor(),
+        OptimizeProcessor(statementOptimizer, expressionOptimizer),
+        PrintingProcessor("// optimized", showDetailed = false),
     )
 
     val statementsMethod = generator.getStatementsMethod()

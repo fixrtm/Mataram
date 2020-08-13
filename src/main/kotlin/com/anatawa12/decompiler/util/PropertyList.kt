@@ -35,7 +35,7 @@ class PropertyList<T, A>(val thisRef: A, private val list: List<Property<T, A>>)
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<T> =
-            PropertyList(thisRef, list.subList(fromIndex, toIndex))
+        PropertyList(thisRef, list.subList(fromIndex, toIndex))
 
     // unsupported modifications: changing the size of list
     override fun add(element: T): Boolean = throw UnsupportedOperationException("add")
@@ -78,7 +78,7 @@ class PropertyList<T, A>(val thisRef: A, private val list: List<Property<T, A>>)
     override fun toString(): String = joinToString(", ", "[", "]")
 
     private class PropertyListMutableListIterator<T>(val list: PropertyList<T, *>, var cursor: Int) :
-            MutableListIterator<T> {
+        MutableListIterator<T> {
         private var wasAction = NO
         override fun hasPrevious(): Boolean = 0 < cursor
 

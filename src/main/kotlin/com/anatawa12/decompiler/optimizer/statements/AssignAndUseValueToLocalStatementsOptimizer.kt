@@ -11,7 +11,7 @@ import kotlinx.collections.immutable.mutate
  * stk1 = (variable op= value)
  */
 object AssignAndUseValueToLocalStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val opAssign = statement[0].exp() as? BiOperationAssignedValue ?: continue

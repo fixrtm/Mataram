@@ -11,7 +11,7 @@ import kotlinx.collections.immutable.mutate
  * stk2 = value.invokeStatic(args)
  */
 object InvokeStaticValueWithSelfStatementsOptimizer :
-        IStatementsOptimizer {
+    IStatementsOptimizer {
     override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
         for (statement in statements) {
             val assign1 = statement[0].exp() as? Assign ?: continue
@@ -29,9 +29,12 @@ object InvokeStaticValueWithSelfStatementsOptimizer :
             assign1.mainStat.removeMe()
             invokeStatic.dispose()
 
-            assign2.mainStat.labelsTargetsMe = assign1.mainStat.labelsTargetsMe.mutate { it.addAll(assign2.mainStat.labelsTargetsMe) }
-            assign2.value = InvokeStaticWithSelfValue(invokeStatic.owner, invokeStatic.name, invokeStatic.desc,
-                    invokeStatic.isInterface, value, invokeStatic.args)
+            assign2.mainStat.labelsTargetsMe =
+                assign1.mainStat.labelsTargetsMe.mutate { it.addAll(assign2.mainStat.labelsTargetsMe) }
+            assign2.value = InvokeStaticWithSelfValue(
+                invokeStatic.owner, invokeStatic.name, invokeStatic.desc,
+                invokeStatic.isInterface, value, invokeStatic.args
+            )
 
             return true
         }

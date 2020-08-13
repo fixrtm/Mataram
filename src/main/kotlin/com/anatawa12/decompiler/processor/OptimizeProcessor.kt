@@ -8,8 +8,8 @@ import com.anatawa12.decompiler.statementsGen.Value
 import com.anatawa12.decompiler.util.Property
 
 class OptimizeProcessor(
-        private val statementOptimizer: List<IStatementsOptimizer>,
-        private val expressionOptimizer: List<IExpressionOptimizer>,
+    private val statementOptimizer: List<IStatementsOptimizer>,
+    private val expressionOptimizer: List<IExpressionOptimizer>,
 ) : IProcessor {
     override fun process(method: StatementsMethod, ctx: ProcessorContext) {
         while (true) {

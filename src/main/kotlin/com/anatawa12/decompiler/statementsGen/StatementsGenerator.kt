@@ -37,9 +37,9 @@ class StatementsGenerator : InstructionVisitor {
     private val localVariables = mutableListOf<LocalVariableInfo>()
 
     fun getStatementsMethod() = StatementsMethod(
-            beginStatement = start,
-            endStatement = end,
-            localVariables = localVariables.toImmutableList(),
+        beginStatement = start,
+        endStatement = end,
+        localVariables = localVariables.toImmutableList(),
     )
 
     private var wasGoto = true
@@ -456,10 +456,10 @@ class StatementsGenerator : InstructionVisitor {
     }
 
     override fun invokedynamic(
-            name: String,
-            descriptor: String,
-            bootstrapMethodHandle: Handle,
-            bootstrapMethodArguments: List<Any>,
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Handle,
+        bootstrapMethodArguments: List<Any>,
     ) {
         preInsn()
         val args = pops(Type.getArgumentTypes(descriptor).size).asReversed()
@@ -467,7 +467,10 @@ class StatementsGenerator : InstructionVisitor {
             +InvokeDynamicVoid(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments, args)
         } else {
             val s1 = StackVariable(Type.getReturnType(descriptor))
-            +Assign(s1, InvokeDynamicValue(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments, args)).stat()
+            +Assign(
+                s1,
+                InvokeDynamicValue(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments, args)
+            ).stat()
             push(s1)
         }
     }
@@ -567,8 +570,8 @@ class StatementsGenerator : InstructionVisitor {
                     FrameElement.Null -> local(index, LocalVariable(index, StackType.Object))
                     FrameElement.UninitializedThis -> local(index, LocalVariable(index, StackType.Object))
                     is FrameElement.RefType -> local(
-                            index,
-                            LocalVariable(index, Type.getObjectType(local.internalName))
+                        index,
+                        LocalVariable(index, Type.getObjectType(local.internalName))
                     )
                     is FrameElement.Uninitialized -> local(index, LocalVariable(index, StackType.Object))
                 }
@@ -602,8 +605,8 @@ class StatementsGenerator : InstructionVisitor {
                         FrameElement.Null -> verifyLocal(index, LocalVariable(index, StackType.Object))
                         FrameElement.UninitializedThis -> verifyLocal(index, LocalVariable(index, StackType.Object))
                         is FrameElement.RefType -> verifyLocal(
-                                index,
-                                LocalVariable(index, Type.getObjectType(local.internalName))
+                            index,
+                            LocalVariable(index, Type.getObjectType(local.internalName))
                         )
                         is FrameElement.Uninitialized -> verifyLocal(index, LocalVariable(index, StackType.Object))
                     }
@@ -637,12 +640,12 @@ class StatementsGenerator : InstructionVisitor {
     }
 
     override fun localVariable(
-            name: String,
-            descriptor: String,
-            signature: String?,
-            start: Label,
-            end: Label,
-            index: Int
+        name: String,
+        descriptor: String,
+        signature: String?,
+        start: Label,
+        end: Label,
+        index: Int
     ) {
         localVariables += LocalVariableInfo(name, descriptor, signature, getStatLabel(start), getStatLabel(end), index)
     }
@@ -740,10 +743,10 @@ class StatementsGenerator : InstructionVisitor {
     private fun getStatLabel(l: Label): StatLabel = statLabels.computeIfAbsent(l, ::StatLabel)
 
     private class StackInfo(
-            val insnAfter: Statement,
-            val locals: ImmutableList<LocalVariable?>,
-            val stack: ImmutableList<StackVariable>,
-            val isDefinition: Boolean,
+        val insnAfter: Statement,
+        val locals: ImmutableList<LocalVariable?>,
+        val stack: ImmutableList<StackVariable>,
+        val isDefinition: Boolean,
     ) {
         init {
             if (isDefinition) {

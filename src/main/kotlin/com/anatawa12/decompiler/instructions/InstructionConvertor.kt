@@ -5,11 +5,11 @@ import org.objectweb.asm.commons.InstructionAdapter
 
 @OptIn(ExperimentalStdlibApi::class)
 class InstructionConvertor(
-        classInternalName: String,
-        access: Int,
-        name: String,
-        desc: String,
-        private val visitor: InstructionVisitor,
+    classInternalName: String,
+    access: Int,
+    name: String,
+    desc: String,
+    private val visitor: InstructionVisitor,
 ) : InstructionAdapter(Opcodes.ASM8, null) {
 
     private val stack = mutableListOf<JvmStackType>()
@@ -101,8 +101,8 @@ class InstructionConvertor(
 
     override fun visitCode() {
         visitor.frame(
-                prevLocals!!,
-                emptyList(),
+            prevLocals!!,
+            emptyList(),
         )
     }
 
@@ -582,10 +582,10 @@ class InstructionConvertor(
     }
 
     override fun invokedynamic(
-            name: String,
-            descriptor: String,
-            bootstrapMethodHandle: Handle,
-            bootstrapMethodArguments: Array<out Any>,
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Handle,
+        bootstrapMethodArguments: Array<out Any>,
     ) {
         invoke(descriptor, false)
         visitor.invokedynamic(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments.toList())
@@ -656,12 +656,12 @@ class InstructionConvertor(
     }
 
     override fun visitLocalVariable(
-            name: String,
-            descriptor: String,
-            signature: String?,
-            start: Label,
-            end: Label,
-            index: Int
+        name: String,
+        descriptor: String,
+        signature: String?,
+        start: Label,
+        end: Label,
+        index: Int
     ) {
         visitor.localVariable(name, descriptor, signature, start, end, index)
     }
@@ -677,12 +677,12 @@ class InstructionConvertor(
             name == "<init>" -> {
                 // constructor
                 prevLocals = listOf(FrameElement.UninitializedThis)
-                        .plus(Type.getType(desc).argumentTypes.map(FrameElement.Companion::byType))
+                    .plus(Type.getType(desc).argumentTypes.map(FrameElement.Companion::byType))
             }
             else -> {
                 // instance
                 prevLocals = listOf(FrameElement.RefType(classInternalName))
-                        .plus(Type.getType(desc).argumentTypes.map(FrameElement.Companion::byType))
+                    .plus(Type.getType(desc).argumentTypes.map(FrameElement.Companion::byType))
             }
         }
     }

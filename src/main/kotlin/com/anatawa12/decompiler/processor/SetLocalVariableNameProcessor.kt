@@ -10,10 +10,10 @@ class SetLocalVariableNameProcessor : IProcessor {
             wasLabel += statement.labelsTargetsMe
             for (local in getAllLocalVariable(statement)) {
                 val info = method.localVariables.asSequence()
-                        .filter { it.index == local.index }
-                        .filter { it.start in wasLabel }
-                        .filter { it.end !in wasLabel }
-                        .firstOrNull() ?: continue
+                    .filter { it.index == local.index }
+                    .filter { it.start in wasLabel }
+                    .filter { it.end !in wasLabel }
+                    .firstOrNull() ?: continue
                 if (local.identifier.info == null) {
                     local.identifier.info = info
                 } else {

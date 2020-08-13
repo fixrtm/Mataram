@@ -47,10 +47,10 @@ interface InstructionVisitor {
     fun invokestatic(owner: String, name: String, descriptor: String, isInterface: Boolean)
     fun invokeinterface(owner: String, name: String, descriptor: String)
     fun invokedynamic(
-            name: String,
-            descriptor: String,
-            bootstrapMethodHandle: Handle,
-            bootstrapMethodArguments: List<Any>,
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Handle,
+        bootstrapMethodArguments: List<Any>,
     )
 
     fun anew(type: Type)

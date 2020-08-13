@@ -65,7 +65,7 @@ sealed class Variable<Producer : IProducer> : Value() {
 
 @Suppress("UNCHECKED_CAST")
 inline fun <reified T : IProducer> variableCastIn(variable: Variable<*>): Variable<in T>? =
-        variableCastIn(variable, T::class.java)
+    variableCastIn(variable, T::class.java)
 
 @Suppress("UNCHECKED_CAST")
 fun <T : IProducer> variableCastIn(variable: Variable<*>, type: Class<T>): Variable<in T>? {
@@ -215,7 +215,7 @@ sealed class IdentifierVariable<Identifier, VariableImpl, Producer>(identifier: 
 }
 
 class LocalVariableIdentifier(val index: Int, override val stackType: StackType, type: Type?) :
-        IdentifierVariableIdentifier<LocalVariableIdentifier, LocalVariable, IProducer>() {
+    IdentifierVariableIdentifier<LocalVariableIdentifier, LocalVariable, IProducer>() {
     var info: LocalVariableInfo? = null
         set(value) {
             if (value != null) check(field == null)
@@ -236,7 +236,7 @@ class LocalVariableIdentifier(val index: Int, override val stackType: StackType,
 }
 
 class StackVariableIdentifier(override val stackType: StackType, override var type: Type?) :
-        IdentifierVariableIdentifier<StackVariableIdentifier, StackVariable, IStackProducer>()
+    IdentifierVariableIdentifier<StackVariableIdentifier, StackVariable, IStackProducer>()
 
 class LocalVariable : IdentifierVariable<LocalVariableIdentifier, LocalVariable, IProducer> {
     val index: Int get() = identifier.index
@@ -267,7 +267,7 @@ class StackVariable : IdentifierVariable<StackVariableIdentifier, StackVariable,
     override val leastType: Class<IStackProducer> get() = IStackProducer::class.java
 
     fun merge(b: StackVariable) {
-        val mergeOnto = mergeImpl(b)
+        mergeImpl(b)
     }
 }
 
@@ -684,12 +684,12 @@ class InstanceField(val owner: String, val name: String, val desc: String, self:
 }
 
 class InvokeVirtualValue(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        self: Value,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    self: Value,
+    args: List<Value>
 ) : ExpressionValue() {
     var self by prop(self)
     val argProps = args.map(::prop)
@@ -730,12 +730,12 @@ class InvokeVirtualValue(
 }
 
 class InvokeSpecialValue(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        self: Value,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    self: Value,
+    args: List<Value>
 ) : ExpressionValue() {
     var self by prop(self)
     val argProps = args.map(::prop)
@@ -776,11 +776,11 @@ class InvokeSpecialValue(
 }
 
 class InvokeStaticValue(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    args: List<Value>
 ) : ExpressionValue() {
     val argProps = args.map(::prop)
     val args = PropertyList(this, argProps)
@@ -818,7 +818,7 @@ class InvokeStaticValue(
 }
 
 class InvokeInterfaceValue(val owner: String, val name: String, val desc: String, self: Value, args: List<Value>) :
-        ExpressionValue() {
+    ExpressionValue() {
     var self by prop(self)
     val argProps = args.map(::prop)
     val args = PropertyList(this, argProps)
@@ -856,11 +856,11 @@ class InvokeInterfaceValue(val owner: String, val name: String, val desc: String
 }
 
 class InvokeDynamicValue(
-        val name: String,
-        val descriptor: String,
-        val bootstrapMethodHandle: Handle,
-        val bootstrapMethodArguments: List<Any>,
-        args: List<Value>,
+    val name: String,
+    val descriptor: String,
+    val bootstrapMethodHandle: Handle,
+    val bootstrapMethodArguments: List<Any>,
+    args: List<Value>,
 ) : ExpressionValue() {
     val argProps = args.map(::prop)
     val args = PropertyList(this, argProps)
@@ -1164,9 +1164,9 @@ class BooleanNotValue(value: Value) : ExpressionValue() {
 }
 
 class ConditionalOperatorValue(
-        condition: Value,
-        ifTrue: Value,
-        ifFalse: Value,
+    condition: Value,
+    ifTrue: Value,
+    ifFalse: Value,
 ) : ExpressionValue() {
     var condition by prop(condition)
     var ifTrue by prop(ifTrue)
@@ -1200,7 +1200,8 @@ class ConditionalOperatorValue(
     }
 }
 
-class BiOperationAssignedValue(val op: BiOp, variable: Variable<in BiOperationAssignedValue>, right: Value) : StatementExpressionValue(), IProducer {
+class BiOperationAssignedValue(val op: BiOp, variable: Variable<in BiOperationAssignedValue>, right: Value) :
+    StatementExpressionValue(), IProducer {
     var variable by mutatingProp(variable, consumes = true)
     var right by prop(right)
 
@@ -1237,7 +1238,8 @@ class BiOperationAssignedValue(val op: BiOp, variable: Variable<in BiOperationAs
     }
 }
 
-class ShiftOperationAssignedValue(val op: ShiftOp, value: Variable<in ShiftOperationAssignedValue>, shift: Value) : StatementExpressionValue(), IProducer {
+class ShiftOperationAssignedValue(val op: ShiftOp, value: Variable<in ShiftOperationAssignedValue>, shift: Value) :
+    StatementExpressionValue(), IProducer {
     var value by mutatingProp(value, consumes = true)
     var shift by prop(shift)
 
@@ -1329,7 +1331,8 @@ class BooleanOrOrOperation(left: Value, right: Value) : ExpressionValue() {
     }
 }
 
-class InDecrementValue(val inDecrement: InDecrementType, variable: Variable<in InDecrementValue>) : ExpressionValue(), IProducer {
+class InDecrementValue(val inDecrement: InDecrementType, variable: Variable<in InDecrementValue>) : ExpressionValue(),
+    IProducer {
     var variable by mutatingProp(variable, consumes = true)
 
     override val type get() = variable.type
@@ -1404,12 +1407,12 @@ class StaticFieldWithSelf(val owner: String, val name: String, val desc: String,
 }
 
 class InvokeStaticWithSelfValue(
-        val owner: String,
-        val name: String,
-        val desc: String,
-        val isInterface: Boolean,
-        self: Value,
-        args: List<Value>
+    val owner: String,
+    val name: String,
+    val desc: String,
+    val isInterface: Boolean,
+    self: Value,
+    args: List<Value>
 ) : ExpressionValue() {
     var self by prop(self)
 
