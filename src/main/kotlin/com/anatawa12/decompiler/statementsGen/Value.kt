@@ -480,11 +480,20 @@ class NegativeOperation(value: Value) : ExpressionValue() {
     }
 }
 
-class CastValue(val insnConvert: InsnConvert, value: Value) : ExpressionValue() {
+class CastValue(val castTo: AllType, value: Value) : ExpressionValue() {
     val value by prop(value)
 
-    override val type get() = insnConvert.to.asmType
-    override val stackType get() = insnConvert.to.stackType
+    override val type get() = castTo.asmType
+    override val stackType get() = castTo.stackType
+
+    init {
+        when (castTo) {
+            AllType.Boolean -> error("invalid cast type to boolean")
+            AllType.Object -> error("invalid cast type to object")
+            else -> {
+            }
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -492,20 +501,20 @@ class CastValue(val insnConvert: InsnConvert, value: Value) : ExpressionValue() 
 
         other as CastValue
 
-        if (insnConvert != other.insnConvert) return false
+        if (castTo != other.castTo) return false
         if (value != other.value) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = insnConvert.hashCode()
+        var result = castTo.hashCode()
         result = 31 * result + value.hashCode()
         return result
     }
 
     override fun toString(): String {
-        return "CastVariable(convert=$insnConvert, value=$value)"
+        return "CastVariable(castTo=$castTo, value=$value)"
     }
 }
 

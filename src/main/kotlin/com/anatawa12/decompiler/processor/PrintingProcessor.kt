@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.processor
 
+import com.anatawa12.decompiler.instructions.AllType
 import com.anatawa12.decompiler.instructions.BiOp
 import com.anatawa12.decompiler.instructions.ShiftOp
 import com.anatawa12.decompiler.statementsGen.*
@@ -314,7 +315,17 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                 pe(v.value)
             }
             is CastValue -> {
-                print(v.insnConvert)
+                when (v.castTo) {
+                    AllType.Boolean -> error("invalid cast type to boolean")
+                    AllType.Object -> error("invalid cast type to object")
+                    AllType.Char -> print("(char)")
+                    AllType.Byte -> print("(byte)")
+                    AllType.Short -> print("(short)")
+                    AllType.Integer -> print("(int)")
+                    AllType.Long -> print("(long)")
+                    AllType.Double -> print("(double)")
+                    AllType.Float -> print("(float)")
+                }
                 print('(')
                 pe(v.value)
                 print(')')

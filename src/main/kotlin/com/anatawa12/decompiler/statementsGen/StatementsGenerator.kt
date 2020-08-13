@@ -248,7 +248,7 @@ class StatementsGenerator : InstructionVisitor {
         val (p1) = pops(1)
         val s1 = StackVariable(cast.to.stackType)
         check(cast.from.stackType, p1)
-        +Assign(s1, CastValue(cast, p1)).stat()
+        +Assign(s1, CastValue(cast.to, p1)).stat()
         push(s1)
     }
 
