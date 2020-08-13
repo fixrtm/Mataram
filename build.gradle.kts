@@ -17,6 +17,8 @@ dependencies {
 
     implementation("org.ow2.asm:asm:8.0.1")
     implementation("org.ow2.asm:asm-commons:8.0.1")
+    // TODO: use latest when kotest is upgraded
+    implementation("com.github.ajalt:clikt:2.6.0")
 
     testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
     testRuntimeOnly("io.kotest:kotest-runner-console-jvm:$kotestVersion")

@@ -7,35 +7,67 @@ import com.anatawa12.decompiler.processor.OptimizeProcessor
 import com.anatawa12.decompiler.processor.PrintingProcessor
 import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.processor.SetLocalVariableNameProcessor
+import com.anatawa12.decompiler.signatures.SClassLoaderEnvironment
+import com.anatawa12.decompiler.signatures.URLSClassLoader
 import com.anatawa12.decompiler.statementsGen.StatementsGenerator
 import com.anatawa12.decompiler.statementsGen.StatementsMethod
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.multiple
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.multiple
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.file
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
-import java.io.File
+import java.net.URL
 import java.util.zip.ZipFile
 
-fun main(args: Array<String>) {
-    require(args.isNotEmpty())
+fun main(args: Array<String>) = Test().main(args)
 
-    val ctx = ProcessorContext()
+class Test : CliktCommand() {
+    val classPath: List<String> by option("-c", "--classpath", help = "class path urls.")
+        .multiple()
 
-    val methods = mutableListOf<StatementsMethod>()
-    for (arg in args) {
-        val argFile = File(arg)
-        if (argFile.isFile) {
-            val zip = ZipFile(argFile)
-            val entries = zip.entries()
-            while (entries.hasMoreElements()) {
-                val entry = entries.nextElement()
-                if (entry.isDirectory) continue
-                if (!entry.name.endsWith(".class")) continue
-                methods += generateForClass(zip.getInputStream(entry).readBytes(), ctx)
+    val javaHome by option("--home", help = "JRE or JDK Home")
+        .default(System.getProperty("java.home"), defaultForHelp = "JAVA_HOME")
+
+    val classOrJars by argument("classes directory or jar files")
+        .file(mustExist = true)
+        .multiple()
+
+    override fun run() {
+        val cp = classPath.toMutableList()
+        for (classOrJar in classOrJars) {
+            cp += if (classOrJar.isFile) {
+                "jar:" + classOrJar.toURI().toString() + "!/"
+            } else {
+                classOrJar.toURI().toString()
             }
-        } else {
-            for (file in argFile.walkTopDown()) {
-                if (!file.isFile) continue
-                methods += generateForClass(file.readBytes(), ctx)
+        }
+
+        val sEnv = SClassLoaderEnvironment(javaHome)
+        val scl = URLSClassLoader(sEnv, cp.map(::URL))
+
+        val ctx = ProcessorContext(sEnv, scl)
+        val methods = mutableListOf<StatementsMethod>()
+
+        for (argFile in classOrJars) {
+            if (argFile.isFile) {
+                val zip = ZipFile(argFile)
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.isDirectory) continue
+                    if (!entry.name.endsWith(".class")) continue
+                    methods += generateForClass(zip.getInputStream(entry).readBytes(), ctx)
+                }
+            } else {
+                for (file in argFile.walkTopDown()) {
+                    if (!file.isFile) continue
+                    methods += generateForClass(file.readBytes(), ctx)
+                }
             }
         }
     }

@@ -1,4 +1,10 @@
 package com.anatawa12.decompiler.processor
 
-class ProcessorContext {
+import com.anatawa12.decompiler.signatures.SClassLoaderEnvironment
+import com.anatawa12.decompiler.signatures.URLSClassLoader
+
+class ProcessorContext(
+    val env: SClassLoaderEnvironment,
+    val scl: URLSClassLoader,
+) {
 }
