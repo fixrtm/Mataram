@@ -35,5 +35,5 @@ class SField {
 
     val constantValue: Any?
 
-    private fun computeType() = declaringClass.environment.forDescriptor(declaringClass.classLoader, descriptor)
+    private fun computeType() = declaringClass.environment.forDescriptorOrNull(declaringClass.classLoader, descriptor)
 }

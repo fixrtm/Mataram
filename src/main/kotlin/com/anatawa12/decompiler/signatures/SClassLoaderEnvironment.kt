@@ -80,6 +80,33 @@ class SClassLoaderEnvironment(
         return theClass
     }
 
+    fun forDescriptorOrNull(loader: SClassLoader?, desc: String): SClass? {
+        var i = 0
+        var arrayDimensions = 0
+        while (desc[i++] == '[') arrayDimensions++
+        i--
+
+        var theClass = when (desc[i]) {
+            'Z' -> booleanType
+            'B' -> byteType
+            'C' -> charType
+            'D' -> doubleType
+            'F' -> floatType
+            'I' -> intType
+            'J' -> longType
+            'S' -> shortType
+            'V' -> voidType
+            'L' -> forNameOrNull(loader, desc.substring(i + 1, desc.length - 1).replace('/', '.'))
+            else -> throw IllegalArgumentException("invalid class")
+        }
+
+        repeat(arrayDimensions) {
+            theClass = theClass?.arrayClass
+        }
+
+        return theClass
+    }
+
     val voidType = SClass(this, "V")
     val booleanType = SClass(this, "Z")
     val byteType = SClass(this, "B")
