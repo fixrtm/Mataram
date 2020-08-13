@@ -101,6 +101,7 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
         GetStaticWithSelfStatementsOptimizer,
         InvokeStaticValueWithSelfStatementsOptimizer,
         InvokeStaticVoidWithSelfStatementsOptimizer,
+        ConstantWithSelfStatementsOptimizer,
 
         NullCheckedValueStatementsOptimizer,
 
