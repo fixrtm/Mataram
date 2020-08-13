@@ -1,6 +1,9 @@
 package com.anatawa12.decompiler.statementsGen
 
-import com.anatawa12.decompiler.instructions.*
+import com.anatawa12.decompiler.instructions.AllType
+import com.anatawa12.decompiler.instructions.BiOp
+import com.anatawa12.decompiler.instructions.ShiftOp
+import com.anatawa12.decompiler.instructions.StackType
 import com.anatawa12.decompiler.util.*
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Type
@@ -341,11 +344,7 @@ sealed class StatementExpressionValue : ExpressionValue() {
 data class ConstantValue(val value: Any?) : ExpressionValue() {
     override val type
         get() = when (val v = value) {
-            is Boolean -> Type.INT_TYPE
-            is Char -> Type.INT_TYPE
-            is Byte -> Type.INT_TYPE
-            is Short -> Type.INT_TYPE
-            is Int -> null
+            is Int -> Type.INT_TYPE
             is Float -> Type.FLOAT_TYPE
             is Long -> Type.LONG_TYPE
             is Double -> Type.DOUBLE_TYPE
@@ -394,8 +393,19 @@ class BiOperation(val op: BiOp, left: Value, right: Value) : ExpressionValue() {
     var left by prop(left)
     var right by prop(right)
 
-    override val type get() = sameOrEitherNullOrNull(left.type, right.type)
+    override val type
+        get() = when (stackType) {
+            StackType.Integer -> Type.INT_TYPE
+            StackType.Long -> Type.LONG_TYPE
+            StackType.Double -> Type.DOUBLE_TYPE
+            StackType.Float -> Type.FLOAT_TYPE
+            StackType.Object -> error("object is not valid type for bi operation")
+        }
     override val stackType get() = sameOrEitherNullOrNull(left.stackType, right.stackType)
+
+    init {
+        require(stackType != StackType.Object)
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
