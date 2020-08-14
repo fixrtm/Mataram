@@ -2,13 +2,40 @@ package com.anatawa12.decompiler.instructions
 
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter
+import org.objectweb.asm.tree.LineNumberNode
+import org.objectweb.asm.tree.MethodNode
+
+object InstructionConvertor {
+    fun convertFromNode(
+        classInternalName: String,
+        node: MethodNode,
+        visitor: InstructionVisitor,
+    ) {
+        val lineNumberTable = node.instructions.asSequence()
+            .filterIsInstance<LineNumberNode>()
+            .map { it.start.label to it.line }
+            .toMap()
+
+        val runner = InstructionConvertorRunner(
+            classInternalName,
+            node.access,
+            node.name,
+            node.desc,
+            lineNumberTable,
+            visitor,
+        )
+
+        node.accept(runner)
+    }
+}
 
 @OptIn(ExperimentalStdlibApi::class)
-class InstructionConvertor(
+private class InstructionConvertorRunner(
     classInternalName: String,
     access: Int,
     name: String,
     desc: String,
+    val lineNumberTable: Map<Label, Int>,
     private val visitor: InstructionVisitor,
 ) : InstructionAdapter(Opcodes.ASM8, null) {
 
@@ -652,6 +679,10 @@ class InstructionConvertor(
     }
 
     override fun mark(label: Label) {
+        val line = lineNumberTable[label]
+        if (line != null) {
+            visitor.markLine(line)
+        }
         visitor.mark(label)
     }
 

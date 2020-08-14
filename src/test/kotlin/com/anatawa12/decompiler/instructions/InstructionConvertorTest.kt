@@ -5,37 +5,45 @@ import io.kotest.core.spec.style.StringSpec
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Test
-
-import org.junit.jupiter.api.Assertions.*
 import org.objectweb.asm.Opcodes
-import java.lang.IllegalStateException
+import org.objectweb.asm.commons.InstructionAdapter
+import org.objectweb.asm.tree.MethodNode
 
 internal class InstructionConvertorTest : StringSpec() {
     init {
         val visitor = mockk<InstructionVisitor>()
-        val convertor = InstructionConvertor("", Opcodes.ACC_STATIC, "", "()V", visitor)
 
         every { visitor.const(any()) } returns Unit
+        every { visitor.frame(any(), any()) } returns Unit
+        every { visitor.endInstructions() } returns Unit
 
         "pop long" {
-            shouldThrow<IllegalStateException> {
+            val node = makeNode { convertor ->
                 convertor.lconst(10)
                 convertor.pop()
+            }
+            shouldThrow<IllegalStateException> {
+                InstructionConvertor.convertFromNode("", node, visitor)
             }
         }
 
         "pop double" {
-            shouldThrow<IllegalStateException> {
+            val node = makeNode { convertor ->
                 convertor.dconst(10.0)
                 convertor.pop()
+            }
+            shouldThrow<IllegalStateException> {
+                InstructionConvertor.convertFromNode("", node, visitor)
             }
         }
 
         "pop2 long" {
             every { visitor.pop() } returns Unit
-            convertor.lconst(10)
-            convertor.pop2()
+            val node = makeNode { convertor ->
+                convertor.lconst(10)
+                convertor.pop2()
+            }
+            InstructionConvertor.convertFromNode("", node, visitor)
             verify {
                 visitor.pop()
             }
@@ -43,11 +51,22 @@ internal class InstructionConvertorTest : StringSpec() {
 
         "pop2 double" {
             every { visitor.pop() } returns Unit
-            convertor.dconst(10.0)
-            convertor.pop2()
+            val node = makeNode { convertor ->
+                convertor.dconst(10.0)
+                convertor.pop2()
+            }
+            InstructionConvertor.convertFromNode("", node, visitor)
             verify {
                 visitor.pop()
             }
         }
+    }
+
+    private fun makeNode(block: (convertor: InstructionAdapter) -> Unit): MethodNode {
+        val node = MethodNode(Opcodes.ACC_STATIC, "", "()V", null, null)
+        node.visitCode()
+        block(InstructionAdapter(node))
+        node.visitMaxs(0, 0)
+        return node
     }
 }

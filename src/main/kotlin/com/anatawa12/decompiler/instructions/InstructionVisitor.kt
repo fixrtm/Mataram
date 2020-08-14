@@ -63,6 +63,7 @@ interface InstructionVisitor {
     fun monitorexit()
     fun multianewarray(descriptor: String, numDimensions: Int)
     fun mark(label: Label)
+    fun markLine(line: Int)
 
     fun frame(locals: List<FrameElement>, stacks: List<FrameElement>)
     fun localVariable(name: String, descriptor: String, signature: String?, start: Label, end: Label, index: Int)

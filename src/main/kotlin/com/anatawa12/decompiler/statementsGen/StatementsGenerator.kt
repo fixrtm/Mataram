@@ -19,6 +19,7 @@ class StatementsGenerator : InstructionVisitor {
 
     private val start = MethodBeginStatement()
     private val end = MethodEndStatement()
+    private var currentLineNumber: Int = -1
 
     init {
         start.next = end
@@ -553,6 +554,10 @@ class StatementsGenerator : InstructionVisitor {
 
     override fun mark(label: Label) {
         nextLabels += getStatLabel(label)
+    }
+
+    override fun markLine(line: Int) {
+        currentLineNumber = line
     }
 
     override fun frame(locals: List<FrameElement>, stacks: List<FrameElement>) {

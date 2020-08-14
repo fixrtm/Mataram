@@ -85,7 +85,6 @@ fun generateForClassNode(node: ClassNode, ctx: ProcessorContext) = node.methods.
 
 fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorContext): StatementsMethod {
     val generator = StatementsGenerator()
-    val convertor = InstructionConvertor(node.name, method.access, method.name, method.desc, generator)
 
     if (node.name == "jp/ngt/ngtlib/event/TickProcessQueue\$DelayProcessEntry"
         && method.name == "process"
@@ -93,7 +92,7 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
     ) {
         print("")
     }
-    method.accept(convertor)
+    InstructionConvertor.convertFromNode(node.name, method, generator)
 
     println("/// method: ${node.name}.${method.name}:${method.desc}")
 
