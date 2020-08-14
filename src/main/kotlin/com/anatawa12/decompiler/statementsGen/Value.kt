@@ -226,6 +226,9 @@ class LocalVariableIdentifier(val index: Int, override val stackType: StackType,
             type = value?.descriptor?.let(Type::getType) ?: type
         }
 
+    constructor(index: Int, stackType: StackType) : this(index, stackType, null)
+    constructor(index: Int, type: Type) : this(index, StackType.byType(type), type)
+
     override var type: Type? = type
         set(value) {
             if (value != null)
@@ -239,7 +242,9 @@ class LocalVariableIdentifier(val index: Int, override val stackType: StackType,
 }
 
 class StackVariableIdentifier(override val stackType: StackType, override var type: Type?) :
-    IdentifierVariableIdentifier<StackVariableIdentifier, StackVariable, IStackProducer>()
+    IdentifierVariableIdentifier<StackVariableIdentifier, StackVariable, IStackProducer>() {
+    fun value() = StackVariable(this)
+}
 
 class LocalVariable : IdentifierVariable<LocalVariableIdentifier, LocalVariable, IProducer> {
     val index: Int get() = identifier.index
@@ -250,10 +255,13 @@ class LocalVariable : IdentifierVariable<LocalVariableIdentifier, LocalVariable,
 
     constructor(index: Int, type: Type) : super(LocalVariableIdentifier(index, StackType.byType(type), type))
 
+    constructor(identifier: LocalVariableIdentifier) : super(identifier)
+
     override val leastType: Class<IProducer> get() = IProducer::class.java
 
     fun merge(b: LocalVariable) {
         check(index == b.index)
+        mergeImpl(b)
     }
 }
 
@@ -265,12 +273,17 @@ class StackVariable : IdentifierVariable<StackVariableIdentifier, StackVariable,
 
     constructor(type: Type) : super(StackVariableIdentifier(StackType.byType(type), type))
 
-    constructor(base: StackVariable) : super(StackVariableIdentifier(base.stackType, base.type))
+    constructor(identifier: StackVariableIdentifier) : super(identifier)
 
     override val leastType: Class<IStackProducer> get() = IStackProducer::class.java
 
     fun merge(b: StackVariable) {
         mergeImpl(b)
+    }
+
+    companion object {
+        fun cloneBy(id: StackVariableIdentifier) = StackVariableIdentifier(id.stackType, id.type).value()
+        fun cloneBy(id: StackVariable) = StackVariableIdentifier(id.stackType, id.type).value()
     }
 }
 
