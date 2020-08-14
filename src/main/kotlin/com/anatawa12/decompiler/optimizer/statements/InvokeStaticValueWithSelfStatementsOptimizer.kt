@@ -34,7 +34,9 @@ object InvokeStaticValueWithSelfStatementsOptimizer :
             assign2.value = InvokeStaticWithSelfValue(
                 invokeStatic.owner, invokeStatic.name, invokeStatic.desc,
                 invokeStatic.isInterface, value, invokeStatic.args
-            )
+            ).apply {
+                lineNumber = invokeStatic.lineNumber
+            }
 
             return true
         }

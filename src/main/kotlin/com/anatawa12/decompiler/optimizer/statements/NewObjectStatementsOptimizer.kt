@@ -86,6 +86,7 @@ object NewObjectStatementsOptimizer :
                 stk2,
                 NewAndCallConstructor(invokeSpecialVoid.owner, invokeSpecialVoid.desc, invokeSpecialVoid.args)
             )
+            assign.value.lineNumber = newObj.lineNumber
 
             invokeSpecialVoid.next.insertPrev(assign.stat())
             assign.mainStat.labelsTargetsMe = persistentListOf<StatLabel>().mutate {

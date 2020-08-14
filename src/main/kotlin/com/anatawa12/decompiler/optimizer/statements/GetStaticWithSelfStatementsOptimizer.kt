@@ -31,7 +31,9 @@ object GetStaticWithSelfStatementsOptimizer :
 
             assign2.mainStat.labelsTargetsMe =
                 assign1.mainStat.labelsTargetsMe.mutate { it.addAll(assign2.mainStat.labelsTargetsMe) }
-            assign2.value = StaticFieldWithSelf(staticValue.owner, staticValue.name, staticValue.desc, value)
+            assign2.value = StaticFieldWithSelf(staticValue.owner, staticValue.name, staticValue.desc, value).apply {
+                lineNumber = staticValue.lineNumber
+            }
 
             return true
         }

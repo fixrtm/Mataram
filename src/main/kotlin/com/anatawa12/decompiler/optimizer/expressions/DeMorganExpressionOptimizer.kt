@@ -42,10 +42,28 @@ object DeMorganExpressionOptimizer : IExpressionOptimizer {
                 setter.value = eiExpr.value
             }
             is BooleanAndAndOperation -> {
-                setter.value = BooleanOrOrOperation(BooleanNotValue(eiExpr.left), BooleanNotValue(eiExpr.right))
+                setter.value = BooleanOrOrOperation(
+                    left = BooleanNotValue(eiExpr.left).apply {
+                        lineNumber = eiExpr.left.lineNumber
+                    },
+                    right = BooleanNotValue(eiExpr.right).apply {
+                        lineNumber = eiExpr.left.lineNumber
+                    },
+                ).apply {
+                    lineNumber = eiExpr.lineNumber
+                }
             }
             is BooleanOrOrOperation -> {
-                setter.value = BooleanAndAndOperation(BooleanNotValue(eiExpr.left), BooleanNotValue(eiExpr.right))
+                setter.value = BooleanAndAndOperation(
+                    left = BooleanNotValue(eiExpr.left).apply {
+                        lineNumber = eiExpr.left.lineNumber
+                    },
+                    right = BooleanNotValue(eiExpr.right).apply {
+                        lineNumber = eiExpr.left.lineNumber
+                    },
+                ).apply {
+                    lineNumber = eiExpr.lineNumber
+                }
             }
             is ConditionValue -> {
                 setter.value = when (eiExpr.condition) {
@@ -55,6 +73,8 @@ object DeMorganExpressionOptimizer : IExpressionOptimizer {
                     BiCondition.LT -> ConditionValue(BiCondition.GE, eiExpr.left, eiExpr.right)
                     BiCondition.GE -> ConditionValue(BiCondition.LT, eiExpr.left, eiExpr.right)
                     BiCondition.GT -> ConditionValue(BiCondition.LE, eiExpr.left, eiExpr.right)
+                }.apply {
+                    lineNumber = eiExpr.lineNumber
                 }
             }
             else -> error("EasyInvertExpressions but not implemented")

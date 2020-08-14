@@ -34,9 +34,13 @@ object ConstantWithSelfStatementsOptimizer : IStatementsOptimizer {
                 assign1.mainStat.labelsTargetsMe.mutate { it.addAll(assign2.mainStat.labelsTargetsMe) }
 
             if (field.isStatic) {
-                assign2.value = StaticFieldWithSelf(type.internalName, field.name, field.descriptor, value)
+                assign2.value = StaticFieldWithSelf(type.internalName, field.name, field.descriptor, value).apply {
+                    lineNumber = constantValue.lineNumber
+                }
             } else {
-                assign2.value = InstanceField(type.internalName, field.name, field.descriptor, value)
+                assign2.value = InstanceField(type.internalName, field.name, field.descriptor, value).apply {
+                    lineNumber = constantValue.lineNumber
+                }
             }
 
             return true

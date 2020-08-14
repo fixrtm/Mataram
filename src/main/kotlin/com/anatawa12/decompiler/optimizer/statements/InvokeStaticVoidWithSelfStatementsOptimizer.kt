@@ -31,7 +31,9 @@ object InvokeStaticVoidWithSelfStatementsOptimizer :
             val static = InvokeStaticWithSelfVoid(
                 invokeStatic.owner, invokeStatic.name, invokeStatic.desc,
                 invokeStatic.isInterface, value, invokeStatic.args
-            )
+            ).apply {
+                setLineNumber(invokeStatic.lineNumber)
+            }
 
             invokeStatic.next.insertPrev(static)
             static.labelsTargetsMe = assign.mainStat.labelsTargetsMe.mutate { it.addAll(invokeStatic.labelsTargetsMe) }
