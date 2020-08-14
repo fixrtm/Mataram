@@ -381,7 +381,7 @@ class ArrayVariable(ary: Value, idx: Value, val elementType: AllType) : Expressi
     var ary by prop(ary)
     var idx by prop(idx)
 
-    override val type by unsafeLazy { ary.type?.toString()?.substring(1)?.let { Type.getType(it) } }
+    override val type get() = ary.type?.toString()?.substring(1)?.let { Type.getType(it) }
     override val stackType get() = elementType.stackType
 
     override fun equals(other: Any?): Boolean {
