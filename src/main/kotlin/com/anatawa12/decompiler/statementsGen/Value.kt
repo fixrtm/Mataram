@@ -11,6 +11,8 @@ import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodType
 
 sealed class Value {
+    var lineNumber: Int = -1
+        @JvmName("setLineNumberImpl") internal set
     val consumes = mutableSetOf<Property<out Value, Value>>()
     val produces = identitySetOf<Property<out Variable<*>, Value>>()
 
@@ -351,6 +353,8 @@ sealed class ExpressionValue : Value() {
 }
 
 sealed class StatementExpressionValue : ExpressionValue() {
+    abstract fun setLineNumber(line: Int)
+
     val mainStat by lazy { consumerStatement!!.thisRef as StatementExpressionStatement }
 }
 
@@ -1110,6 +1114,12 @@ class Assign(variable: Variable<in Assign>, value: Value) : StatementExpressionV
     override val type get() = sameOrEitherNullOrNull(variable.type, value.type)
     override val stackType get() = sameOrEitherNullOrNull(variable.stackType, value.stackType)
 
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        value.lineNumber = line
+        variable.lineNumber = line
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -1240,6 +1250,12 @@ class BiOperationAssignedValue(val op: BiOp, variable: Variable<in BiOperationAs
     override val type get() = sameOrEitherNullOrNull(variable.type, right.type)
     override val stackType get() = sameOrEitherNullOrNull(variable.stackType, right.stackType)
 
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        right.lineNumber = line
+        variable.lineNumber = line
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -1277,6 +1293,12 @@ class ShiftOperationAssignedValue(val op: ShiftOp, value: Variable<in ShiftOpera
 
     override val type get() = value.type
     override val stackType get() = value.stackType
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        shift.lineNumber = line
+        value.lineNumber = line
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

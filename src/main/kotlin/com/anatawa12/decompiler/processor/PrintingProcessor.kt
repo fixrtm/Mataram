@@ -38,6 +38,10 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
     }
 
     private fun ps(s: Statement) {
+        print("#")
+        print(s.lineNumber)
+        print(": ")
+
         @Suppress("REDUNDANT_ELSE_IN_WHEN")
         when (s) {
             is MethodBeginStatement -> {
@@ -245,6 +249,10 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
     }
 
     private fun pe(v: Value) {
+        print("#")
+        print(v.lineNumber)
+        print(": ")
+
         @Suppress("REDUNDANT_ELSE_IN_WHEN")
         when (v) {
             is LocalVariable -> {

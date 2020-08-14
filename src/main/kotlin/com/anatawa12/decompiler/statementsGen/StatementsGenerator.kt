@@ -29,6 +29,7 @@ class StatementsGenerator : InstructionVisitor {
     private operator fun Statement.unaryPlus() {
         this.labelsTargetsMe = nextLabels.toPersistentList()
         nextLabels.clear()
+        setLineNumber(currentLineNumber)
         end.insertPrev(this)
     }
 
@@ -239,7 +240,7 @@ class StatementsGenerator : InstructionVisitor {
         val l = LocalVariable(variable, StackType.Integer)
         check(StackType.Integer == LocalVariable(local(variable)).stackType)
         local(variable, l.identifier)
-        +Assign(l, BiOperation(BiOp.Add, LocalVariable(local(variable)), ConstantValue(increment))).stat()
+        +BiOperationAssignedValue(BiOp.Add, LocalVariable(local(variable)), ConstantValue(increment)).stat()
     }
 
     override fun cast(cast: InsnConvert) {
@@ -292,6 +293,9 @@ class StatementsGenerator : InstructionVisitor {
             InsnCondition.Null -> ConditionValue(BiCondition.EQ, p1.value(), ConstantValue(null))
             InsnCondition.NonNull -> ConditionValue(BiCondition.NE, p1.value(), ConstantValue(null))
         }
+        conditionValue.lineNumber = currentLineNumber
+        conditionValue.left.lineNumber = currentLineNumber
+        conditionValue.right.lineNumber = currentLineNumber
         +ConditionalGoto(conditionValue, getStatLabel(label))
 
         applyStackInfo(getStatLabel(label))
@@ -311,7 +315,11 @@ class StatementsGenerator : InstructionVisitor {
             InsnBiCondition.ACmpEQ -> BiCondition.EQ
             InsnBiCondition.ACmpNE -> BiCondition.NE
         }
-        +ConditionalGoto(ConditionValue(condition, left.value(), right.value()), getStatLabel(label))
+        val conditionValue = ConditionValue(condition, left.value(), right.value())
+        conditionValue.lineNumber = currentLineNumber
+        conditionValue.left.lineNumber = currentLineNumber
+        conditionValue.right.lineNumber = currentLineNumber
+        +ConditionalGoto(conditionValue, getStatLabel(label))
         applyStackInfo(getStatLabel(label))
     }
 

@@ -10,6 +10,8 @@ import kotlinx.collections.immutable.toImmutableList
 import org.objectweb.asm.Handle
 
 sealed class Statement {
+    var lineNumber: Int = -1
+        private set
     val consumes = mutableSetOf<Property<out Value, Statement>>()
     val produces = identitySetOf<Property<out Variable<*>, Statement>>()
 
@@ -68,6 +70,10 @@ sealed class Statement {
         var cur = this
         repeat(index) { cur = cur.next }
         return cur
+    }
+
+    open fun setLineNumber(line: Int) {
+        lineNumber = line
     }
 
     companion object {
@@ -141,6 +147,11 @@ class MethodEndStatement() : Statement() {
 
 class StatementExpressionStatement(expression: StatementExpressionValue) : Statement() {
     var expression by prop(expression)
+
+    override fun setLineNumber(line: Int) {
+        super.setLineNumber(line)
+        expression.setLineNumber(line)
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
