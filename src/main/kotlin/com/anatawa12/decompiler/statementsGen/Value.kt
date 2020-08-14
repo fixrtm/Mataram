@@ -12,7 +12,10 @@ import java.lang.invoke.MethodType
 
 sealed class Value {
     var lineNumber: Int = -1
-        @JvmName("setLineNumberImpl") internal set
+        @JvmName("setLineNumberImpl") internal set(value) {
+            if (field != -2)
+                field = value
+        }
     val consumes = mutableSetOf<Property<out Value, Value>>()
     val produces = identitySetOf<Property<out Variable<*>, Value>>()
 
@@ -642,6 +645,10 @@ class ConditionValue(val condition: BiCondition, left: Value, right: Value) : Ex
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
 
+    init {
+        lineNumber = -2
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -1114,6 +1121,10 @@ class Assign(variable: Variable<in Assign>, value: Value) : StatementExpressionV
     override val type get() = sameOrEitherNullOrNull(variable.type, value.type)
     override val stackType get() = sameOrEitherNullOrNull(variable.stackType, value.stackType)
 
+    init {
+        lineNumber = -2
+    }
+
     override fun setLineNumber(line: Int) {
         this.lineNumber = line
         value.lineNumber = line
@@ -1155,6 +1166,10 @@ class NewArrayWithInitializerValue(val elementType: Type, arrayInitializer: List
     override val type by unsafeLazy { Type.getType("[$elementType") }
     override val stackType get() = StackType.Object
 
+    init {
+        lineNumber = -2
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -1184,6 +1199,10 @@ class BooleanNotValue(value: Value) : ExpressionValue() {
 
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
+
+    init {
+        lineNumber = -2
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -1217,6 +1236,10 @@ class ConditionalOperatorValue(
     override val type get() = sameOrEitherNullOrNull(ifTrue.type, ifFalse.type)
     override val stackType get() = sameOrEitherNullOrNull(ifTrue.stackType, ifFalse.stackType)
 
+    init {
+        lineNumber = -2
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -1249,6 +1272,10 @@ class BiOperationAssignedValue(val op: BiOp, variable: Variable<in BiOperationAs
 
     override val type get() = sameOrEitherNullOrNull(variable.type, right.type)
     override val stackType get() = sameOrEitherNullOrNull(variable.stackType, right.stackType)
+
+    init {
+        lineNumber = -2
+    }
 
     override fun setLineNumber(line: Int) {
         this.lineNumber = line
@@ -1294,6 +1321,10 @@ class ShiftOperationAssignedValue(val op: ShiftOp, value: Variable<in ShiftOpera
     override val type get() = value.type
     override val stackType get() = value.stackType
 
+    init {
+        lineNumber = -2
+    }
+
     override fun setLineNumber(line: Int) {
         this.lineNumber = line
         shift.lineNumber = line
@@ -1332,6 +1363,10 @@ class BooleanAndAndOperation(left: Value, right: Value) : ExpressionValue() {
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
 
+    init {
+        lineNumber = -2
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -1362,6 +1397,10 @@ class BooleanOrOrOperation(left: Value, right: Value) : ExpressionValue() {
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
 
+    init {
+        lineNumber = -2
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -1391,6 +1430,10 @@ class InDecrementValue(val inDecrement: InDecrementType, variable: Variable<in I
 
     override val type get() = variable.type
     override val stackType get() = variable.stackType
+
+    init {
+        lineNumber = -2
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -1515,6 +1558,7 @@ class NullChecked(value: Value) : ExpressionValue() {
 
     init {
         check(value.stackType == StackType.Object)
+        lineNumber = -2
     }
 
     override val type: Type? get() = value.type

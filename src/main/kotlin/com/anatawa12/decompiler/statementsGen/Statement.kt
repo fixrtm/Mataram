@@ -73,7 +73,8 @@ sealed class Statement {
     }
 
     open fun setLineNumber(line: Int) {
-        lineNumber = line
+        if (lineNumber != -2)
+            lineNumber = line
     }
 
     companion object {
@@ -148,8 +149,11 @@ class MethodEndStatement() : Statement() {
 class StatementExpressionStatement(expression: StatementExpressionValue) : Statement() {
     var expression by prop(expression)
 
+    init {
+        super.setLineNumber(-2)
+    }
+
     override fun setLineNumber(line: Int) {
-        super.setLineNumber(line)
         expression.setLineNumber(line)
     }
 
@@ -656,6 +660,7 @@ class TryCatchBlockIdentifier(val catchesInternalName: String?) {
 
 class TryBlockStart(val identifier: TryCatchBlockIdentifier) : Statement() {
     init {
+        super.setLineNumber(-2)
         identifier.tryStart = this
         labelsTargetsMe = persistentListOf()
     }
@@ -682,6 +687,7 @@ class TryBlockStart(val identifier: TryCatchBlockIdentifier) : Statement() {
 
 class TryBlockEnd(val identifier: TryCatchBlockIdentifier) : Statement() {
     init {
+        super.setLineNumber(-2)
         identifier.tryEnd = this
         labelsTargetsMe = persistentListOf()
     }
@@ -713,6 +719,7 @@ class CatchBlockStart(
     var catchVariable by mutatingProp(catchVariable, consumes = false)
 
     init {
+        super.setLineNumber(-2)
         identifier.catchStart = this
         labelsTargetsMe = persistentListOf()
     }
