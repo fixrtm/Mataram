@@ -368,8 +368,17 @@ data class ConstantValue(val value: VConstantValue) : ExpressionValue() {
 }
 
 sealed class VConstantValue(val value: Any?, val theType: Type?, val stackType: StackType)
-sealed class VConstantNumber(val number: Number, theType: Type?, stackType: StackType) :
-    VConstantValue(number, theType, stackType)
+sealed class VConstantNumber : VConstantValue {
+    val number: Number
+
+    constructor(number: Number, theType: Type?, stackType: StackType) : super(number, theType, stackType) {
+        this.number = number
+    }
+
+    constructor(number: Number, value: Any?, theType: Type?, stackType: StackType) : super(value, theType, stackType) {
+        this.number = number
+    }
+}
 
 object VConstantNull : VConstantValue(null, null, StackType.Object)
 data class VConstantString(val string: String) :
@@ -385,6 +394,13 @@ data class VConstantMethodType(val type: Type) :
 
 data class VConstantHandle(val handle: Handle) :
     VConstantValue(handle, Type.getType(MethodHandle::class.java), StackType.Object)
+
+// java constant value
+data class VConstantByte(val byte: Byte) : VConstantNumber(byte, Type.BYTE_TYPE, StackType.Integer)
+data class VConstantChar(val char: Char) : VConstantNumber(char.toInt(), char, Type.CHAR_TYPE, StackType.Integer)
+data class VConstantShort(val short: Short) : VConstantNumber(short, Type.SHORT_TYPE, StackType.Integer)
+data class VConstantBoolean(val boolean: Boolean) :
+    VConstantNumber(if (boolean) 1 else 1, boolean, Type.BOOLEAN_TYPE, StackType.Integer)
 
 class VConstantConstantDynamic(val dynamic: ConstantDynamic) :
     VConstantValue(dynamic, Type.getType(MethodHandle::class.java), StackType.Object)
