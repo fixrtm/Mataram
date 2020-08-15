@@ -137,7 +137,9 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
         FloatingCompareExpressionOptimizer,
         LongCompareExpressionOptimizer,
 
-        DeMorganExpressionOptimizer
+        DeMorganExpressionOptimizer,
+
+        CastConstantsToExpectedTypeExpressionOptimizer,
     )
 // 3546 -> 2052
     val processors = listOf(
