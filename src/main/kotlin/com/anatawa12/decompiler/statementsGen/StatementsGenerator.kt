@@ -8,7 +8,7 @@ import org.objectweb.asm.Handle
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 
-class StatementsGenerator : InstructionVisitor {
+class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionVisitor {
     private val locals = mutableListOf<LocalVariable?>()
 
     private fun local(variable: Int) = locals[variable]?.identifier ?: error("local not found: #$variable")
@@ -29,6 +29,7 @@ class StatementsGenerator : InstructionVisitor {
     private operator fun Statement.unaryPlus() {
         this.labelsTargetsMe = nextLabels.toPersistentList()
         nextLabels.clear()
+        this.coreSignature = coreSignature
         setLineNumber(currentLineNumber)
         end.insertPrev(this)
     }
@@ -39,6 +40,7 @@ class StatementsGenerator : InstructionVisitor {
         beginStatement = start,
         endStatement = end,
         localVariables = localVariables.toImmutableList(),
+        signature = coreSignature,
     )
 
     private var wasGoto = true

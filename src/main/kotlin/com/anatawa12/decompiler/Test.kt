@@ -9,6 +9,7 @@ import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.processor.SetLocalVariableNameProcessor
 import com.anatawa12.decompiler.signatures.SClassLoaderEnvironment
 import com.anatawa12.decompiler.signatures.URLSClassLoader
+import com.anatawa12.decompiler.statementsGen.MethodCoreSignature
 import com.anatawa12.decompiler.statementsGen.StatementsGenerator
 import com.anatawa12.decompiler.statementsGen.StatementsMethod
 import com.github.ajalt.clikt.core.CliktCommand
@@ -84,7 +85,8 @@ fun generateForClassNode(node: ClassNode, ctx: ProcessorContext) = node.methods.
 }
 
 fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorContext): StatementsMethod {
-    val generator = StatementsGenerator()
+    val coreSignature = MethodCoreSignature(node.name, method.access, method.name, method.desc)
+    val generator = StatementsGenerator(coreSignature)
 
     if (node.name == "jp/ngt/ngtlib/event/TickProcessQueue\$DelayProcessEntry"
         && method.name == "process"

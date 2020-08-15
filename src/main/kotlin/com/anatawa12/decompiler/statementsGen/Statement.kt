@@ -11,6 +11,8 @@ import org.objectweb.asm.Handle
 import org.objectweb.asm.Type
 
 sealed class Statement {
+    var coreSignature: MethodCoreSignature? = null
+
     var lineNumber: Int = -1
         private set
     val consumes = mutableSetOf<ValueProperty<*, Statement>>()
