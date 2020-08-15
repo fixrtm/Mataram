@@ -343,7 +343,9 @@ class LookupSwitch(val default: StatLabel, val pairs: List<Pair<Int, StatLabel>>
 
 // switch
 class ReturnValue(value: Value) : Statement() {
-    var variable by prop(value) { TODO("impl") }
+    var variable by prop(value) {
+        coreSignature?.let { ExpectTypes.by(Type.getReturnType(it.desc)) } ?: ExpectTypes.Unknown
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
