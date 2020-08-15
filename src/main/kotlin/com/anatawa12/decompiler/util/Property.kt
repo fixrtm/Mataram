@@ -2,7 +2,7 @@ package com.anatawa12.decompiler.util
 
 import kotlin.reflect.KProperty
 
-class Property<T, out A> constructor(value: T, val thisRef: A, val type: Class<T>) {
+open class Property<T, out A> constructor(value: T, val thisRef: A, val type: Class<T>) {
     var value: T = value
         set(value) {
             onChange(field, value)

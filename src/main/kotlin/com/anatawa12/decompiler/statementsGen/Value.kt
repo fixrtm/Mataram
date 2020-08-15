@@ -17,30 +17,77 @@ sealed class Value {
             if (field != -2)
                 field = value
         }
-    val consumes = mutableSetOf<Property<out Value, Value>>()
+    val consumes = mutableSetOf<ValueProperty<*, Value>>()
     val produces = identitySetOf<Property<out Variable<*>, Value>>()
 
     abstract val type: Type?
     abstract val stackType: StackType
 
-    abstract fun consumeByExpression(value: Property<out Value, Value>)
-    abstract fun consumeByStatement(statement: Property<out Value, Statement>)
-    abstract fun unConsumeByExpression(value: Property<out Value, Value>)
-    abstract fun unConsumeByStatement(statement: Property<out Value, Statement>)
+    abstract fun consumeByExpression(value: ValueProperty<*, Value>)
+    abstract fun consumeByStatement(statement: ValueProperty<*, Statement>)
+    abstract fun unConsumeByExpression(value: ValueProperty<*, Value>)
+    abstract fun unConsumeByStatement(statement: ValueProperty<*, Statement>)
 
-    inline fun <reified T : Value> prop(value: T) = prop(value, T::class.java)
-    fun <T : Value> prop(value: T, type: Class<T>) = Property(value, this, type).also { prop ->
-        consumes += prop
-        value.consumeByExpression(prop)
-        prop.onChange = { from, to ->
-            from.unConsumeByExpression(prop)
-            to.consumeByExpression(prop)
+    inline fun <reified T : Value> prop(value: T, noinline expectedTypeGetter: () -> ExpectTypes) =
+        prop(value, T::class.java, expectedTypeGetter)
+
+    inline fun <reified T : Value> prop(value: T, expectedType: ExpectTypes) =
+        prop(value, T::class.java, { expectedType })
+
+    fun <T : Value> prop(value: T, type: Class<T>, expectedTypeGetter: () -> ExpectTypes) =
+        ValueProperty(value, this, type, expectedTypeGetter).also { prop ->
+            consumes += prop
+            value.consumeByExpression(prop)
+            prop.onChange = { from, to ->
+                from.unConsumeByExpression(prop)
+                to.consumeByExpression(prop)
+            }
         }
-    }
 
     open fun dispose() {
         for (consume in consumes) {
             consume.value.unConsumeByExpression(consume)
+        }
+    }
+}
+
+class ValueProperty<T : Value, out A>(
+    value: T,
+    thisRef: A,
+    type: Class<T>,
+    private val expectedTypeGetter: () -> ExpectTypes
+) :
+    Property<T, A>(value, thisRef, type) {
+    val expectedType get() = expectedTypeGetter()
+}
+
+enum class ExpectTypes {
+    Boolean,
+    Char,
+    Byte,
+    Short,
+    AnyInteger,
+    Long,
+    Double,
+    Float,
+    Object,
+    Unknown,
+
+    ;
+
+    companion object {
+        fun by(t: Type): ExpectTypes = when (t.sort) {
+            Type.BOOLEAN -> Boolean
+            Type.CHAR -> Char
+            Type.BYTE -> Byte
+            Type.SHORT -> Short
+            Type.INT -> AnyInteger
+            Type.FLOAT -> Float
+            Type.LONG -> Long
+            Type.DOUBLE -> Double
+            Type.ARRAY -> Object
+            Type.OBJECT -> Object
+            else -> error("unsupported type: $t")
         }
     }
 }
@@ -52,18 +99,19 @@ inline fun <V, reified T> V.mutatingProp(value: T, consumes: Boolean)
         where V : IProducer, V : Value, T : Variable<in V> = mutatingProp(value, consumes, T::class.java)
 
 fun <V, T> V.mutatingProp(value: T, consumes: Boolean, type: Class<T>)
-        where V : IProducer, V : Value, T : Variable<in V> = Property(value, this, type).also { prop ->
-    if (consumes) this.consumes += prop
-    produces += prop
-    if (consumes) value.consumeByExpression(prop)
-    value.addProducer(this)
-    prop.onChange = { from, to ->
-        if (consumes) from.unConsumeByExpression(prop)
-        from.removeProducer(this)
-        if (consumes) to.consumeByExpression(prop)
-        to.addProducer(this)
+        where V : Value, V : IProducer, T : Variable<in V> =
+    ValueProperty(value, this, type, { ExpectTypes.Unknown }).also { prop ->
+        if (consumes) this.consumes += prop
+        produces += prop
+        if (consumes) value.consumeByExpression(prop)
+        value.addProducer(this)
+        prop.onChange = { from, to ->
+            if (consumes) from.unConsumeByExpression(prop)
+            from.removeProducer(this)
+            if (consumes) to.consumeByExpression(prop)
+            to.addProducer(this)
+        }
     }
-}
 
 
 sealed class Variable<Producer : IProducer> : Value() {
@@ -87,8 +135,8 @@ sealed class IdentifierVariableIdentifier<Identifier, VariableImpl, Producer>
               VariableImpl : IdentifierVariable<Identifier, VariableImpl, Producer>,
               Producer : IProducer {
     val producers = identitySetOf<Producer>()
-    val consumerExpressions = mutableSetOf<Property<out Value, Value>>()
-    val consumerStatements = mutableSetOf<Property<out Value, Statement>>()
+    val consumerExpressions = mutableSetOf<ValueProperty<out Value, Value>>()
+    val consumerStatements = mutableSetOf<ValueProperty<out Value, Statement>>()
     val consumers get() = consumerExpressions + consumerStatements
 
     val id = (nextId++).toString().padStart(5, '0')
@@ -155,19 +203,19 @@ sealed class IdentifierVariable<Identifier, VariableImpl, Producer>(identifier: 
         return mergeOnto
     }
 
-    override fun consumeByExpression(value: Property<out Value, Value>) {
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
         identifier.consumerExpressions += value
     }
 
-    override fun consumeByStatement(statement: Property<out Value, Statement>) {
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
         identifier.consumerStatements += statement
     }
 
-    override fun unConsumeByExpression(value: Property<out Value, Value>) {
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
         identifier.consumerExpressions -= value
     }
 
-    override fun unConsumeByStatement(statement: Property<out Value, Statement>) {
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
         identifier.consumerStatements -= statement
     }
 
@@ -294,8 +342,8 @@ class StackVariable : IdentifierVariable<StackVariableIdentifier, StackVariable,
 }
 
 sealed class ExpressionVariable : Variable<IProducer>() {
-    var consumer: Property<out Value, Value>? = null
-    var consumerStatement: Property<out Value, Statement>? = null
+    var consumer: ValueProperty<*, Value>? = null
+    var consumerStatement: ValueProperty<*, Statement>? = null
     var producer: IProducer? = null
 
     override val leastType: Class<IProducer> get() = IProducer::class.java
@@ -310,47 +358,48 @@ sealed class ExpressionVariable : Variable<IProducer>() {
         this.producer = null
     }
 
-    override fun consumeByExpression(value: Property<out Value, Value>) {
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
         check(consumer == null && consumerStatement == null)
         consumer = value
     }
 
-    override fun consumeByStatement(statement: Property<out Value, Statement>) {
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
         check(consumer == null && consumerStatement == null)
         consumerStatement = statement
     }
 
-    override fun unConsumeByExpression(value: Property<out Value, Value>) {
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
         require(value == consumer)
         consumer = null
     }
 
-    override fun unConsumeByStatement(statement: Property<out Value, Statement>) {
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
         require(statement == consumerStatement)
         consumerStatement = null
     }
 }
 
 sealed class ExpressionValue : Value() {
-    var consumer: Property<out Value, Value>? = null
-    var consumerStatement: Property<out Value, Statement>? = null
+    val anyConsumer get() = consumer ?: consumerStatement
+    var consumer: ValueProperty<*, Value>? = null
+    var consumerStatement: ValueProperty<*, Statement>? = null
 
-    override fun consumeByExpression(value: Property<out Value, Value>) {
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
         check(consumer == null && consumerStatement == null)
         consumer = value
     }
 
-    override fun consumeByStatement(statement: Property<out Value, Statement>) {
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
         check(consumer == null && consumerStatement == null)
         consumerStatement = statement
     }
 
-    override fun unConsumeByExpression(value: Property<out Value, Value>) {
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
         require(value == consumer)
         consumer = null
     }
 
-    override fun unConsumeByStatement(statement: Property<out Value, Statement>) {
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
         require(statement == consumerStatement)
         consumerStatement = null
     }
@@ -406,8 +455,8 @@ class VConstantConstantDynamic(val dynamic: ConstantDynamic) :
     VConstantValue(dynamic, Type.getType(MethodHandle::class.java), StackType.Object)
 
 class ArrayVariable(ary: Value, idx: Value, val elementType: AllType) : ExpressionVariable() {
-    var ary by prop(ary)
-    var idx by prop(idx)
+    var ary by prop(ary, ExpectTypes.Object)
+    var idx by prop(idx, ExpectTypes.AnyInteger)
 
     override val type get() = ary.type?.toString()?.substring(1)?.let { Type.getType(it) }
     override val stackType get() = elementType.stackType
@@ -438,8 +487,8 @@ class ArrayVariable(ary: Value, idx: Value, val elementType: AllType) : Expressi
 }
 
 class BiOperation(val op: BiOp, left: Value, right: Value) : ExpressionValue() {
-    var left by prop(left)
-    var right by prop(right)
+    var left by prop(left, ::computeExpected)
+    var right by prop(right, ::computeExpected)
 
     override val type
         get() = when (stackType) {
@@ -453,6 +502,19 @@ class BiOperation(val op: BiOp, left: Value, right: Value) : ExpressionValue() {
 
     init {
         require(stackType != StackType.Object)
+    }
+
+    private fun computeExpected() = when (anyConsumer?.expectedType ?: ExpectTypes.Unknown) {
+        ExpectTypes.Boolean -> ExpectTypes.Boolean
+        ExpectTypes.Char -> error("cannot expect char for bi operation")
+        ExpectTypes.Byte -> error("cannot expect byte for bi operation")
+        ExpectTypes.Short -> error("cannot expect short for bi operation")
+        ExpectTypes.AnyInteger -> ExpectTypes.AnyInteger
+        ExpectTypes.Long -> ExpectTypes.Long
+        ExpectTypes.Double -> ExpectTypes.Double
+        ExpectTypes.Float -> ExpectTypes.Float
+        ExpectTypes.Object -> error("cannot expect object for bi operation")
+        ExpectTypes.Unknown -> ExpectTypes.Unknown
     }
 
     override fun equals(other: Any?): Boolean {
@@ -481,11 +543,24 @@ class BiOperation(val op: BiOp, left: Value, right: Value) : ExpressionValue() {
 }
 
 class ShiftOperation(val op: ShiftOp, value: Value, shift: Value) : ExpressionValue() {
-    var value by prop(value)
-    var shift by prop(shift)
+    var value by prop(value, ::computeExpected)
+    var shift by prop(shift, ExpectTypes.AnyInteger)
 
     override val type get() = value.type
     override val stackType get() = value.stackType
+
+    private fun computeExpected() = when (anyConsumer?.expectedType ?: ExpectTypes.Unknown) {
+        ExpectTypes.Boolean -> error("cannot expect boolean for shift operation")
+        ExpectTypes.Char -> error("cannot expect char for shift operation")
+        ExpectTypes.Byte -> error("cannot expect byte for shift operation")
+        ExpectTypes.Short -> error("cannot expect short for shift operation")
+        ExpectTypes.AnyInteger -> ExpectTypes.AnyInteger
+        ExpectTypes.Long -> ExpectTypes.Long
+        ExpectTypes.Double -> ExpectTypes.Double
+        ExpectTypes.Float -> ExpectTypes.Float
+        ExpectTypes.Object -> error("cannot expect object for shift operation")
+        ExpectTypes.Unknown -> ExpectTypes.Unknown
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -513,10 +588,23 @@ class ShiftOperation(val op: ShiftOp, value: Value, shift: Value) : ExpressionVa
 }
 
 class NegativeOperation(value: Value) : ExpressionValue() {
-    val value by prop(value)
+    val value by prop(value, ::computeExpected)
 
     override val type get() = value.type
     override val stackType get() = value.stackType
+
+    private fun computeExpected() = when (anyConsumer?.expectedType ?: ExpectTypes.Unknown) {
+        ExpectTypes.Boolean -> error("cannot expect boolean for negative operation")
+        ExpectTypes.Char -> ExpectTypes.Char
+        ExpectTypes.Byte -> ExpectTypes.Byte
+        ExpectTypes.Short -> ExpectTypes.Short
+        ExpectTypes.AnyInteger -> ExpectTypes.AnyInteger
+        ExpectTypes.Long -> ExpectTypes.Long
+        ExpectTypes.Double -> ExpectTypes.Double
+        ExpectTypes.Float -> ExpectTypes.Float
+        ExpectTypes.Object -> error("cannot expect object for negative operation")
+        ExpectTypes.Unknown -> ExpectTypes.Unknown
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -539,7 +627,7 @@ class NegativeOperation(value: Value) : ExpressionValue() {
 }
 
 class CastValue(val castTo: AllType, value: Value) : ExpressionValue() {
-    val value by prop(value)
+    val value by prop(value, ExpectTypes.Unknown)
 
     override val type get() = castTo.asmType
     override val stackType get() = castTo.stackType
@@ -577,8 +665,8 @@ class CastValue(val castTo: AllType, value: Value) : ExpressionValue() {
 }
 
 class LongCompare(left: Value, right: Value) : ExpressionValue() {
-    var left by prop(left)
-    var right by prop(right)
+    var left by prop(left, ExpectTypes.Long)
+    var right by prop(right, ExpectTypes.Long)
 
     override val type get() = Type.INT_TYPE
     override val stackType get() = StackType.Integer
@@ -607,8 +695,8 @@ class LongCompare(left: Value, right: Value) : ExpressionValue() {
 }
 
 class FloatingCompareLesser(left: Value, right: Value) : ExpressionValue() {
-    var left by prop(left)
-    var right by prop(right)
+    var left by prop(left, ExpectTypes.Unknown)
+    var right by prop(right, ExpectTypes.Unknown)
 
     override val type get() = Type.INT_TYPE
     override val stackType get() = StackType.Integer
@@ -637,8 +725,8 @@ class FloatingCompareLesser(left: Value, right: Value) : ExpressionValue() {
 }
 
 class FloatingCompareGreater(left: Value, right: Value) : ExpressionValue() {
-    var left by prop(left)
-    var right by prop(right)
+    var left by prop(left, ExpectTypes.Unknown)
+    var right by prop(right, ExpectTypes.Unknown)
 
     override val type get() = Type.INT_TYPE
     override val stackType get() = StackType.Integer
@@ -667,8 +755,8 @@ class FloatingCompareGreater(left: Value, right: Value) : ExpressionValue() {
 }
 
 class ConditionValue(val condition: BiCondition, left: Value, right: Value) : ExpressionValue() {
-    var left by prop(left)
-    var right by prop(right)
+    var left by prop(left, ExpectTypes.Unknown)
+    var right by prop(right, ExpectTypes.Unknown)
 
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
@@ -722,7 +810,7 @@ data class StaticField(val owner: String, val name: String, val desc: String) : 
 }
 
 class InstanceField(val owner: String, val name: String, val desc: String, self: Value) : ExpressionVariable() {
-    var self by prop(self)
+    var self by prop(self, ExpectTypes.Object)
 
     override val type by unsafeLazy { Type.getType(desc) }
     override val stackType by unsafeLazy { StackType.byDesc(desc) }
@@ -762,8 +850,8 @@ class InvokeVirtualValue(
     self: Value,
     args: List<Value>
 ) : ExpressionValue() {
-    var self by prop(self)
-    val argProps = args.map(::prop)
+    var self by prop(self, ExpectTypes.Object)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
@@ -808,8 +896,8 @@ class InvokeSpecialValue(
     self: Value,
     args: List<Value>
 ) : ExpressionValue() {
-    var self by prop(self)
-    val argProps = args.map(::prop)
+    var self by prop(self, ExpectTypes.Object)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
@@ -853,7 +941,7 @@ class InvokeStaticValue(
     val isInterface: Boolean,
     args: List<Value>
 ) : ExpressionValue() {
-    val argProps = args.map(::prop)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
@@ -890,8 +978,8 @@ class InvokeStaticValue(
 
 class InvokeInterfaceValue(val owner: String, val name: String, val desc: String, self: Value, args: List<Value>) :
     ExpressionValue() {
-    var self by prop(self)
-    val argProps = args.map(::prop)
+    var self by prop(self, ExpectTypes.Object)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
@@ -933,7 +1021,7 @@ class InvokeDynamicValue(
     val bootstrapMethodArguments: List<Any>,
     args: List<Value>,
 ) : ExpressionValue() {
-    val argProps = args.map(::prop)
+    val argProps = args.zip(Type.getArgumentTypes(descriptor)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(descriptor) }
@@ -973,7 +1061,7 @@ data class NewObject(override val type: Type) : ExpressionValue() {
 }
 
 class NewArray(val element: Type, size: Value) : ExpressionValue() {
-    val size by prop(size)
+    val size by prop(size, ExpectTypes.AnyInteger)
 
     override val type by unsafeLazy { Type.getType("[$element") }
     override val stackType get() = StackType.Object
@@ -1002,7 +1090,7 @@ class NewArray(val element: Type, size: Value) : ExpressionValue() {
 }
 
 class ArrayLength(array: Value) : ExpressionValue() {
-    var array by prop(array)
+    var array by prop(array, ExpectTypes.Object)
 
     override val type get() = Type.INT_TYPE
     override val stackType get() = StackType.Integer
@@ -1028,7 +1116,7 @@ class ArrayLength(array: Value) : ExpressionValue() {
 }
 
 class CheckCast(value: Value, override val type: Type) : ExpressionValue() {
-    var value by prop(value)
+    var value by prop(value, ExpectTypes.Object)
 
     override val stackType get() = StackType.Integer
 
@@ -1053,7 +1141,7 @@ class CheckCast(value: Value, override val type: Type) : ExpressionValue() {
 }
 
 class InstanceOf(value: Value, val classType: Type) : ExpressionValue() {
-    var value by prop(value)
+    var value by prop(value, ExpectTypes.Object)
 
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
@@ -1079,7 +1167,7 @@ class InstanceOf(value: Value, val classType: Type) : ExpressionValue() {
 }
 
 class MultiANewArray(val arrayType: Type, dimensionSizes: List<Value>) : ExpressionValue() {
-    private val dimensionSizeProps = dimensionSizes.map(::prop)
+    private val dimensionSizeProps = dimensionSizes.map { prop(it, ExpectTypes.AnyInteger) }
     val dimensionSizes = PropertyList(this, dimensionSizeProps)
 
     override val type get() = arrayType
@@ -1111,7 +1199,7 @@ class MultiANewArray(val arrayType: Type, dimensionSizes: List<Value>) : Express
 /// java expression variables
 
 class NewAndCallConstructor(val owner: String, val desc: String, args: List<Value>) : ExpressionValue() {
-    val argProps = args.map(::prop)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getObjectType(owner) }
@@ -1143,7 +1231,7 @@ class NewAndCallConstructor(val owner: String, val desc: String, args: List<Valu
 }
 
 class Assign(variable: Variable<in Assign>, value: Value) : StatementExpressionValue(), IStackProducer {
-    var value by prop(value)
+    var value by prop(value) { this.variable.type?.let((ExpectTypes)::by) ?: ExpectTypes.Unknown }
     var variable by mutatingProp(variable, consumes = false)
 
     override val type get() = sameOrEitherNullOrNull(variable.type, value.type)
@@ -1188,7 +1276,7 @@ class Assign(variable: Variable<in Assign>, value: Value) : StatementExpressionV
 }
 
 class NewArrayWithInitializerValue(val elementType: Type, arrayInitializer: List<Value>) : ExpressionValue() {
-    val arrayInitializerProps = arrayInitializer.map { prop(it) }
+    val arrayInitializerProps = arrayInitializer.map { prop(it, ExpectTypes.by(elementType)) }
     val arrayInitializer = PropertyList(this, arrayInitializerProps)
 
     override val type by unsafeLazy { Type.getType("[$elementType") }
@@ -1223,7 +1311,7 @@ class NewArrayWithInitializerValue(val elementType: Type, arrayInitializer: List
 }
 
 class BooleanNotValue(value: Value) : ExpressionValue() {
-    var value by prop(value)
+    var value by prop(value, ExpectTypes.Boolean)
 
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
@@ -1257,9 +1345,9 @@ class ConditionalOperatorValue(
     ifTrue: Value,
     ifFalse: Value,
 ) : ExpressionValue() {
-    var condition by prop(condition)
-    var ifTrue by prop(ifTrue)
-    var ifFalse by prop(ifFalse)
+    var condition by prop(condition, ExpectTypes.Boolean)
+    var ifTrue by prop(ifTrue) { anyConsumer?.expectedType ?: ExpectTypes.Unknown }
+    var ifFalse by prop(ifFalse) { anyConsumer?.expectedType ?: ExpectTypes.Unknown }
 
     override val type get() = sameOrEitherNullOrNull(ifTrue.type, ifFalse.type)
     override val stackType get() = sameOrEitherNullOrNull(ifTrue.stackType, ifFalse.stackType)
@@ -1296,7 +1384,7 @@ class ConditionalOperatorValue(
 class BiOperationAssignedValue(val op: BiOp, variable: Variable<in BiOperationAssignedValue>, right: Value) :
     StatementExpressionValue(), IProducer {
     var variable by mutatingProp(variable, consumes = true)
-    var right by prop(right)
+    var right by prop(right) { this.variable.type?.let((ExpectTypes)::by) ?: ExpectTypes.Unknown }
 
     override val type get() = sameOrEitherNullOrNull(variable.type, right.type)
     override val stackType get() = sameOrEitherNullOrNull(variable.stackType, right.stackType)
@@ -1344,7 +1432,7 @@ class BiOperationAssignedValue(val op: BiOp, variable: Variable<in BiOperationAs
 class ShiftOperationAssignedValue(val op: ShiftOp, value: Variable<in ShiftOperationAssignedValue>, shift: Value) :
     StatementExpressionValue(), IProducer {
     var value by mutatingProp(value, consumes = true)
-    var shift by prop(shift)
+    var shift by prop(shift, ExpectTypes.AnyInteger)
 
     override val type get() = value.type
     override val stackType get() = value.stackType
@@ -1385,8 +1473,8 @@ class ShiftOperationAssignedValue(val op: ShiftOp, value: Variable<in ShiftOpera
 }
 
 class BooleanAndAndOperation(left: Value, right: Value) : ExpressionValue() {
-    var left by prop(left)
-    var right by prop(right)
+    var left by prop(left, ExpectTypes.Boolean)
+    var right by prop(right, ExpectTypes.Boolean)
 
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
@@ -1419,8 +1507,8 @@ class BooleanAndAndOperation(left: Value, right: Value) : ExpressionValue() {
 }
 
 class BooleanOrOrOperation(left: Value, right: Value) : ExpressionValue() {
-    var left by prop(left)
-    var right by prop(right)
+    var left by prop(left, ExpectTypes.Boolean)
+    var right by prop(right, ExpectTypes.Boolean)
 
     override val type get() = Type.BOOLEAN_TYPE
     override val stackType get() = StackType.Integer
@@ -1499,7 +1587,7 @@ enum class InDecrementType {
 }
 
 class StaticFieldWithSelf(val owner: String, val name: String, val desc: String, self: Value) : ExpressionVariable() {
-    var self by prop(self)
+    var self by prop(self, ExpectTypes.Object)
 
     override val type by unsafeLazy { Type.getType(desc) }
     override val stackType by unsafeLazy { StackType.byDesc(desc) }
@@ -1539,9 +1627,9 @@ class InvokeStaticWithSelfValue(
     self: Value,
     args: List<Value>
 ) : ExpressionValue() {
-    var self by prop(self)
+    var self by prop(self, ExpectTypes.Object)
 
-    val argProps = args.map(::prop)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
@@ -1582,7 +1670,7 @@ class InvokeStaticWithSelfValue(
  * null check only for inner class creation
  */
 class NullChecked(value: Value) : ExpressionValue() {
-    var value by prop(value)
+    var value by prop(value, ExpectTypes.Object)
 
     init {
         check(value.stackType == StackType.Object)
@@ -1620,19 +1708,19 @@ object TemporaryExpressionValue : Value() {
     override val stackType get() = error("not implemented")
 
 
-    override fun consumeByExpression(value: Property<out Value, Value>) {
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
         // nop
     }
 
-    override fun consumeByStatement(statement: Property<out Value, Statement>) {
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
         // nop
     }
 
-    override fun unConsumeByExpression(value: Property<out Value, Value>) {
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
         // nop
     }
 
-    override fun unConsumeByStatement(statement: Property<out Value, Statement>) {
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
         // nop
     }
 }

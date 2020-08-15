@@ -8,11 +8,12 @@ import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import org.objectweb.asm.Handle
+import org.objectweb.asm.Type
 
 sealed class Statement {
     var lineNumber: Int = -1
         private set
-    val consumes = mutableSetOf<Property<out Value, Statement>>()
+    val consumes = mutableSetOf<ValueProperty<*, Statement>>()
     val produces = identitySetOf<Property<out Variable<*>, Statement>>()
 
     private var labelsTargetsMeBack: PersistentList<StatLabel>? = null
@@ -38,15 +39,21 @@ sealed class Statement {
         labelsTargetsMeBack?.forEach { it.at = null }
     }
 
-    inline fun <reified T : Value> prop(value: T) = prop(value, T::class.java)
-    fun <T : Value> prop(value: T, type: Class<T>) = Property(value, this, type).also { prop ->
-        consumes += prop
-        value.consumeByStatement(prop)
-        prop.onChange = { from, to ->
-            from.unConsumeByStatement(prop)
-            to.consumeByStatement(prop)
+    inline fun <reified T : Value> prop(value: T, noinline expectedTypeGetter: () -> ExpectTypes) =
+        prop(value, T::class.java, expectedTypeGetter)
+
+    inline fun <reified T : Value> prop(value: T, expectedType: ExpectTypes) =
+        prop(value, T::class.java, { expectedType })
+
+    fun <T : Value> prop(value: T, type: Class<T>, expectedTypeGetter: () -> ExpectTypes) =
+        ValueProperty(value, this, type, expectedTypeGetter).also { prop ->
+            consumes += prop
+            value.consumeByStatement(prop)
+            prop.onChange = { from, to ->
+                from.unConsumeByStatement(prop)
+                to.consumeByStatement(prop)
+            }
         }
-    }
 
     fun insertPrev(stat: Statement) {
         val prev = this.prev
@@ -99,18 +106,19 @@ inline fun <V, reified T> V.mutatingProp(value: T, consumes: Boolean)
         where V : IProducer, V : Statement, T : Variable<in V> = mutatingProp(value, consumes, T::class.java)
 
 fun <V, T> V.mutatingProp(value: T, consumes: Boolean, type: Class<T>)
-        where V : IProducer, V : Statement, T : Variable<in V> = Property(value, this, type).also { prop ->
-    if (consumes) this.consumes += prop
-    produces += prop
-    if (consumes) value.consumeByStatement(prop)
-    value.addProducer(this)
-    prop.onChange = { from, to ->
-        if (consumes) from.unConsumeByStatement(prop)
-        from.removeProducer(this)
-        if (consumes) to.consumeByStatement(prop)
-        to.addProducer(this)
+        where V : IProducer, V : Statement, T : Variable<in V> =
+    ValueProperty(value, this, type, { ExpectTypes.Unknown }).also { prop ->
+        if (consumes) this.consumes += prop
+        produces += prop
+        if (consumes) value.consumeByStatement(prop)
+        value.addProducer(this)
+        prop.onChange = { from, to ->
+            if (consumes) from.unConsumeByStatement(prop)
+            from.removeProducer(this)
+            if (consumes) to.consumeByStatement(prop)
+            to.addProducer(this)
+        }
     }
-}
 
 class MethodBeginStatement() : Statement(), Iterable<Statement> {
     init {
@@ -147,7 +155,7 @@ class MethodEndStatement() : Statement() {
 }
 
 class StatementExpressionStatement(expression: StatementExpressionValue) : Statement() {
-    var expression by prop(expression)
+    var expression by prop(expression, ExpectTypes.Unknown)
 
     init {
         super.setLineNumber(-2)
@@ -186,7 +194,7 @@ fun StatementExpressionValue.stat() = StatementExpressionStatement(this)
  * jump if true
  */
 class ConditionalGoto(value: Value, val label: StatLabel) : Statement(), IStatLabelConsumer {
-    var value by prop(value)
+    var value by prop(value, ExpectTypes.Boolean)
 
     init {
         label.usedBy += this
@@ -265,7 +273,7 @@ class Ret(val variable: LocalVariable) : Statement() {
 
 class TableSwitch(val min: Int, val max: Int, val default: StatLabel, val labels: List<StatLabel>, value: Value) :
     Statement(), IStatLabelConsumer {
-    var value by prop(value)
+    var value by prop(value, ExpectTypes.AnyInteger)
 
     init {
         default.usedBy += this
@@ -301,7 +309,7 @@ class TableSwitch(val min: Int, val max: Int, val default: StatLabel, val labels
 
 class LookupSwitch(val default: StatLabel, val pairs: List<Pair<Int, StatLabel>>, value: Value) : Statement(),
     IStatLabelConsumer {
-    var value by prop(value)
+    var value by prop(value, ExpectTypes.AnyInteger)
 
     init {
         default.usedBy += this
@@ -333,7 +341,7 @@ class LookupSwitch(val default: StatLabel, val pairs: List<Pair<Int, StatLabel>>
 
 // switch
 class ReturnValue(value: Value) : Statement() {
-    var variable by prop(value)
+    var variable by prop(value) { TODO("impl") }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -375,8 +383,8 @@ class InvokeVirtualVoid(
     self: Value,
     args: List<Value>
 ) : Statement() {
-    var self by prop(self)
-    val argProps = args.map(::prop)
+    var self by prop(self, ExpectTypes.Object)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     var args = PropertyList(this, argProps)
 
     override fun equals(other: Any?): Boolean {
@@ -418,8 +426,8 @@ class InvokeSpecialVoid(
     self: Value,
     args: List<Value>
 ) : Statement() {
-    var self by prop(self)
-    val argProps = args.map(::prop)
+    var self by prop(self, ExpectTypes.Object)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     var args = PropertyList(this, argProps)
 
     override fun equals(other: Any?): Boolean {
@@ -460,7 +468,7 @@ class InvokeStaticVoid(
     val isInterface: Boolean,
     args: List<Value>
 ) : Statement() {
-    val argProps = args.map(::prop)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     var args = PropertyList(this, argProps)
 
     override fun equals(other: Any?): Boolean {
@@ -494,8 +502,8 @@ class InvokeStaticVoid(
 
 class InvokeInterfaceVoid(val owner: String, val name: String, val desc: String, self: Value, args: List<Value>) :
     Statement() {
-    var self by prop(self)
-    val argProps = args.map(::prop)
+    var self by prop(self, ExpectTypes.Object)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     var args = PropertyList(this, argProps)
 
     override fun equals(other: Any?): Boolean {
@@ -534,7 +542,7 @@ class InvokeDynamicVoid(
     val bootstrapMethodArguments: List<Any>,
     args: List<Value>,
 ) : Statement() {
-    val argProps = args.map(::prop)
+    val argProps = args.zip(Type.getArgumentTypes(descriptor)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     var args = PropertyList(this, argProps)
 
     override fun equals(other: Any?): Boolean {
@@ -567,7 +575,7 @@ class InvokeDynamicVoid(
 }
 
 class ThrowException(throws: Value) : Statement() {
-    var throws by prop(throws)
+    var throws by prop(throws, ExpectTypes.Object)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -590,7 +598,7 @@ class ThrowException(throws: Value) : Statement() {
 }
 
 class MonitorEnter(monitorObj: Value) : Statement() {
-    var monitorObj by prop(monitorObj)
+    var monitorObj by prop(monitorObj, ExpectTypes.Object)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -613,7 +621,7 @@ class MonitorEnter(monitorObj: Value) : Statement() {
 }
 
 class MonitorExit(monitorObj: Value) : Statement() {
-    var monitorObj by prop(monitorObj)
+    var monitorObj by prop(monitorObj, ExpectTypes.Object)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -759,8 +767,8 @@ class InvokeStaticWithSelfVoid(
     self: Value,
     args: List<Value>
 ) : Statement() {
-    var self by prop(self)
-    val argProps = args.map(::prop)
+    var self by prop(self, ExpectTypes.Object)
+    val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     var args = PropertyList(this, argProps)
 
     override fun equals(other: Any?): Boolean {
