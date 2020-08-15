@@ -24,15 +24,15 @@ object NewArrayWithInitializerStatementsOptimizer :
             val assign1 = statement[0].exp() as? Assign ?: continue@root
             val newArray = assign1.value as? NewArray ?: continue@root
             val arraySizeValue = newArray.size as? ConstantValue ?: continue@root
-            val arraySize = arraySizeValue.value as? Int ?: continue@root
+            val arraySize = arraySizeValue.value as? VConstantInt ?: continue@root
             var lastValue = assign1.variable as? StackVariable ?: continue@root
             var lastStat = assign1
-            if (arraySize == 0) continue@root
+            if (arraySize == VConstantInt(0)) continue@root
 
             val variables = mutableListOf<Value>()
             val stats = mutableListOf(assign1)
 
-            for (i in 0 until arraySize) {
+            for (i in 0 until arraySize.int) {
                 val assign2 = lastStat.mainStat.next.exp() as? Assign ?: continue@root
                 val assign3 = assign2.mainStat.next.exp() as? Assign ?: continue@root
                 val assign2To = assign2.variable as? StackVariable ?: continue@root
@@ -44,7 +44,7 @@ object NewArrayWithInitializerStatementsOptimizer :
 
                 if (assign2From != lastValue) continue@root
                 if (assign3ToAry != lastValue) continue@root
-                if (assign3ToIdx.value != i) continue@root
+                if (assign3ToIdx.value != VConstantInt(i)) continue@root
 
                 if (assign2.mainStat.labelsTargetsMe.any { it.usedBy.isNotEmpty() }) continue@root
                 if (assign3.mainStat.labelsTargetsMe.any { it.usedBy.isNotEmpty() }) continue@root

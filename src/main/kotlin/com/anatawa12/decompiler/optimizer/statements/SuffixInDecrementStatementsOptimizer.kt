@@ -50,7 +50,7 @@ object SuffixInDecrementStatementsOptimizer :
             val const1 = biOp.right as? ConstantValue ?: continue
 
             if (stk12 != stk13) continue
-            if (const1.value != 1) continue
+            if (const1.value != VConstantInt(1)) continue
             val inDecrementType = when (biOp.op) {
                 BiOp.Add -> InDecrementType.SuffixIncrement
                 BiOp.Sub -> InDecrementType.SuffixDecrement

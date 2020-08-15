@@ -48,11 +48,11 @@ object ConstantWithSelfStatementsOptimizer : IStatementsOptimizer {
         return false
     }
 
-    private fun sameConstant(a: Any?, b: Any?): Boolean {
-        if (a is Long && b is Long)
-            return a == b
-        if (a is Number && b is Number)
-            return a.toDouble().compareTo(b.toDouble()) == 0
+    private fun sameConstant(a: Any?, b: VConstantValue): Boolean {
+        if (a is Long && b is VConstantLong)
+            return a == b.long
+        if (a is Number && b is VConstantNumber)
+            return a.toDouble().compareTo(b.number.toDouble()) == 0
         return a == b
     }
 }

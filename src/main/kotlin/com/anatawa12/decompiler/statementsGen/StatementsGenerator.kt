@@ -66,10 +66,22 @@ class StatementsGenerator : InstructionVisitor {
         preInsn()
     }
 
-    override fun const(value: Any?) {
+    override fun const(value: InsnConstantValue) {
         preInsn()
-        val s = StackVariable(StackType.byValue(value))
-        +Assign(s, ConstantValue(value)).stat()
+        val s = StackVariable(value.stackType)
+        val vConst = when (value) {
+            InsnConstantNull -> VConstantNull
+            is InsnConstantString -> VConstantString(value.string)
+            is InsnConstantInt -> VConstantInt(value.int)
+            is InsnConstantLong -> VConstantLong(value.long)
+            is InsnConstantFloat -> VConstantFloat(value.float)
+            is InsnConstantDouble -> VConstantDouble(value.double)
+            is InsnConstantType -> VConstantType(value.type)
+            is InsnConstantMethodType -> VConstantMethodType(value.type)
+            is InsnConstantHandle -> VConstantHandle(value.handle)
+            is InsnConstantConstantDynamic -> VConstantConstantDynamic(value.dynamic)
+        }
+        +Assign(s, ConstantValue(vConst)).stat()
         push(s)
     }
 
@@ -240,7 +252,11 @@ class StatementsGenerator : InstructionVisitor {
         val l = LocalVariable(variable, StackType.Integer)
         check(StackType.Integer == LocalVariable(local(variable)).stackType)
         local(variable, l.identifier)
-        +BiOperationAssignedValue(BiOp.Add, LocalVariable(local(variable)), ConstantValue(increment)).stat()
+        +BiOperationAssignedValue(
+            BiOp.Add,
+            LocalVariable(local(variable)),
+            ConstantValue(VConstantInt(increment))
+        ).stat()
     }
 
     override fun cast(cast: InsnConvert) {
@@ -284,14 +300,14 @@ class StatementsGenerator : InstructionVisitor {
         val (p1) = pops(1)
         check(insnCondition.input, p1)
         val conditionValue = when (insnCondition) {
-            InsnCondition.EQ -> ConditionValue(BiCondition.EQ, p1.value(), ConstantValue(0))
-            InsnCondition.NE -> ConditionValue(BiCondition.NE, p1.value(), ConstantValue(0))
-            InsnCondition.LT -> ConditionValue(BiCondition.LT, p1.value(), ConstantValue(0))
-            InsnCondition.GE -> ConditionValue(BiCondition.GE, p1.value(), ConstantValue(0))
-            InsnCondition.GT -> ConditionValue(BiCondition.GT, p1.value(), ConstantValue(0))
-            InsnCondition.LE -> ConditionValue(BiCondition.LE, p1.value(), ConstantValue(0))
-            InsnCondition.Null -> ConditionValue(BiCondition.EQ, p1.value(), ConstantValue(null))
-            InsnCondition.NonNull -> ConditionValue(BiCondition.NE, p1.value(), ConstantValue(null))
+            InsnCondition.EQ -> ConditionValue(BiCondition.EQ, p1.value(), ConstantValue(VConstantInt(0)))
+            InsnCondition.NE -> ConditionValue(BiCondition.NE, p1.value(), ConstantValue(VConstantInt(0)))
+            InsnCondition.LT -> ConditionValue(BiCondition.LT, p1.value(), ConstantValue(VConstantInt(0)))
+            InsnCondition.GE -> ConditionValue(BiCondition.GE, p1.value(), ConstantValue(VConstantInt(0)))
+            InsnCondition.GT -> ConditionValue(BiCondition.GT, p1.value(), ConstantValue(VConstantInt(0)))
+            InsnCondition.LE -> ConditionValue(BiCondition.LE, p1.value(), ConstantValue(VConstantInt(0)))
+            InsnCondition.Null -> ConditionValue(BiCondition.EQ, p1.value(), ConstantValue(VConstantNull))
+            InsnCondition.NonNull -> ConditionValue(BiCondition.NE, p1.value(), ConstantValue(VConstantNull))
         }
         conditionValue.lineNumber = currentLineNumber
         conditionValue.left.lineNumber = currentLineNumber

@@ -137,42 +137,46 @@ private class InstructionConvertorRunner(
 
     override fun aconst(value: Any?) {
         push(JvmStackType.Object)
-        visitor.const(value)
+        when (value) {
+            is String -> visitor.const(InsnConstantString(value))
+            null -> visitor.const(InsnConstantNull)
+            else -> error("")
+        }
     }
 
     override fun iconst(value: Int) {
         push(JvmStackType.Integer)
-        visitor.const(value)
+        visitor.const(InsnConstantInt(value))
     }
 
     override fun lconst(value: Long) {
         push(JvmStackType.Long)
-        visitor.const(value)
+        visitor.const(InsnConstantLong(value))
     }
 
     override fun fconst(value: Float) {
         push(JvmStackType.Float)
-        visitor.const(value)
+        visitor.const(InsnConstantFloat(value))
     }
 
     override fun dconst(value: Double) {
         push(JvmStackType.Double)
-        visitor.const(value)
+        visitor.const(InsnConstantDouble(value))
     }
 
     override fun tconst(value: Type) {
         push(JvmStackType.Object)
-        visitor.const(value)
+        visitor.const(InsnConstantType(value))
     }
 
     override fun hconst(value: Handle) {
         push(JvmStackType.Object)
-        visitor.const(value)
+        visitor.const(InsnConstantHandle(value))
     }
 
     override fun cconst(value: ConstantDynamic) {
         push(JvmStackType.Object)
-        visitor.const(value)
+        visitor.const(InsnConstantConstantDynamic(value))
     }
 
     override fun load(`var`: Int, type: Type) {

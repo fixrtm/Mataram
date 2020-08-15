@@ -16,7 +16,7 @@ object FloatingCompareExpressionOptimizer : IExpressionOptimizer {
         val compare = expr.value as? ConditionValue ?: return false
         val zero = compare.right as? ConstantValue ?: return false
 
-        if (zero.value != 0) return false
+        if (zero.value != VConstantInt(0)) return false
 
         when (val floatComp = compare.left) {
             is FloatingCompareGreater -> {

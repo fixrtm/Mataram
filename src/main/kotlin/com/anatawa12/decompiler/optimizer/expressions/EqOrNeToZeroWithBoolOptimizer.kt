@@ -21,7 +21,7 @@ object EqOrNeToZeroWithBoolOptimizer : IExpressionOptimizer {
         val boolExp = eq.left
         val zero = eq.right as? ConstantValue ?: return false
         if (boolExp.type != Type.BOOLEAN_TYPE) return false
-        if (zero.value != 0 && zero.value != false) return false
+        if (zero.value != VConstantInt(0) && zero.value != VConstantBoolean(false)) return false
 
         val setter = expr.castInAs<Value>() ?: return false
 

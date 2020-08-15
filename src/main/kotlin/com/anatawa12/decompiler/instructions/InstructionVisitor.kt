@@ -6,7 +6,7 @@ import org.objectweb.asm.Type
 
 interface InstructionVisitor {
     fun nop()
-    fun const(value: Any?)
+    fun const(value: InsnConstantValue)
     fun load(variable: Int, type: StackType)
     fun aload(type: AllType)
     fun store(variable: Int, type: StackType)

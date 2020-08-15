@@ -28,8 +28,8 @@ object PrefixLocalInDecrementStatementsOptimizer :
             if (var11 != var12) continue
             if (var12 != var13) continue
             val isPositive = when (const1.value) {
-                1 -> true
-                -1 -> false
+                VConstantInt(1) -> true
+                VConstantInt(-1) -> false
                 else -> continue
             }
 

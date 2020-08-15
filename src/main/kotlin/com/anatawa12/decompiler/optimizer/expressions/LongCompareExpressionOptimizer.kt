@@ -11,7 +11,7 @@ object LongCompareExpressionOptimizer : IExpressionOptimizer {
         val longComp = compare.left as? LongCompare ?: return false
         val zero = compare.right as? ConstantValue ?: return false
 
-        if (zero.value != 0) return false
+        if (zero.value != VConstantInt(0)) return false
 
         compare.dispose()
         longComp.dispose()

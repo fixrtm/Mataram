@@ -5,6 +5,7 @@ import com.anatawa12.decompiler.instructions.BiOp
 import com.anatawa12.decompiler.instructions.ShiftOp
 import com.anatawa12.decompiler.instructions.StackType
 import com.anatawa12.decompiler.util.*
+import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Type
 import java.lang.invoke.MethodHandle
@@ -361,21 +362,32 @@ sealed class StatementExpressionValue : ExpressionValue() {
     val mainStat by lazy { consumerStatement!!.thisRef as StatementExpressionStatement }
 }
 
-data class ConstantValue(val value: Any?) : ExpressionValue() {
-    override val type
-        get() = when (val v = value) {
-            is Int -> Type.INT_TYPE
-            is Float -> Type.FLOAT_TYPE
-            is Long -> Type.LONG_TYPE
-            is Double -> Type.DOUBLE_TYPE
-            is Type -> if (v.sort == Type.METHOD) Type.getType(MethodType::class.java) else Type.getType(Class::class.java)
-            is Handle -> Type.getType(MethodHandle::class.java)
-            is String -> Type.getType(String::class.java)
-            null -> null
-            else -> error("unsupported type: $v")
-        }
-    override val stackType get() = StackType.byValue(value)
+data class ConstantValue(val value: VConstantValue) : ExpressionValue() {
+    override val type get() = value.theType
+    override val stackType get() = value.stackType
 }
+
+sealed class VConstantValue(val value: Any?, val theType: Type?, val stackType: StackType)
+sealed class VConstantNumber(val number: Number, theType: Type?, stackType: StackType) :
+    VConstantValue(number, theType, stackType)
+
+object VConstantNull : VConstantValue(null, null, StackType.Object)
+data class VConstantString(val string: String) :
+    VConstantValue(string, Type.getType(String::class.java), StackType.Object)
+
+data class VConstantInt(val int: Int) : VConstantNumber(int, Type.INT_TYPE, StackType.Integer)
+data class VConstantLong(val long: Long) : VConstantNumber(long, Type.LONG_TYPE, StackType.Long)
+data class VConstantFloat(val float: Float) : VConstantNumber(float, Type.FLOAT_TYPE, StackType.Float)
+data class VConstantDouble(val double: Double) : VConstantNumber(double, Type.DOUBLE_TYPE, StackType.Double)
+data class VConstantType(val type: Type) : VConstantValue(type, Type.getType(Class::class.java), StackType.Object)
+data class VConstantMethodType(val type: Type) :
+    VConstantValue(type, Type.getType(MethodType::class.java), StackType.Object)
+
+data class VConstantHandle(val handle: Handle) :
+    VConstantValue(handle, Type.getType(MethodHandle::class.java), StackType.Object)
+
+class VConstantConstantDynamic(val dynamic: ConstantDynamic) :
+    VConstantValue(dynamic, Type.getType(MethodHandle::class.java), StackType.Object)
 
 class ArrayVariable(ary: Value, idx: Value, val elementType: AllType) : ExpressionVariable() {
     var ary by prop(ary)

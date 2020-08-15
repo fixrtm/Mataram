@@ -281,12 +281,12 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                 print(v.spInfo())
             }
             is ConstantValue -> {
-                if (v.value is String) {
+                if (v.value is VConstantString) {
                     print('"')
-                    print(v.value)
+                    print(v.value.string)
                     print('"')
                 } else {
-                    print(v.value)
+                    print(v.value.value)
                 }
             }
             is ArrayVariable -> {
