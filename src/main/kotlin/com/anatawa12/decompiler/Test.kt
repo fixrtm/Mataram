@@ -129,6 +129,8 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
     )
 
     val expressionOptimizer = listOf<IExpressionOptimizer>(
+        CastConstantsToExpectedTypeExpressionOptimizer,
+
         BiOperationAssignExpressionOptimizer,
         ShiftOperationAssignExpressionOptimizer,
 
@@ -140,7 +142,7 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
         DeMorganExpressionOptimizer,
         BooleanConstantConditionalOperatorExpressionOptimizer,
 
-        CastConstantsToExpectedTypeExpressionOptimizer,
+        StringPlusOperatorContactingExpressionOptimizer,
     )
 // 3546 -> 2052
     val processors = listOf(

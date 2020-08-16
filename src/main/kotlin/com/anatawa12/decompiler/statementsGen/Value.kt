@@ -1667,6 +1667,41 @@ class InvokeStaticWithSelfValue(
 }
 
 /**
+ * string contacting
+ */
+class StringContacting(elements: List<Value>) : ExpressionValue() {
+    val elementProps = elements.map { prop(it, ExpectTypes.Unknown) }
+    val elements = PropertyList(this, elementProps)
+
+
+    init {
+        lineNumber = -2
+    }
+
+    override val type: Type? = Type.getType(String::class.java)
+    override val stackType: StackType get() = StackType.Object
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as StringContacting
+
+        if (elements != other.elements) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return elements.hashCode()
+    }
+
+    override fun toString(): String {
+        return "StringContacting(${elements.joinToString(" + ")})"
+    }
+}
+
+/**
  * null check only for inner class creation
  */
 class NullChecked(value: Value) : ExpressionValue() {

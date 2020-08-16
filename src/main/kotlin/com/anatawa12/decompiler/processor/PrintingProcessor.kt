@@ -687,6 +687,13 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                     print("*/")
                 }
             }
+            is StringContacting -> {
+                for ((i, element) in v.elements.withIndex()) {
+                    if (i != 0)
+                        print(" + ")
+                    pe(element)
+                }
+            }
             is NullChecked -> {
                 print("NullChecked(")
                 pe(v.value)
