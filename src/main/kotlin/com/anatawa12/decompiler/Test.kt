@@ -138,6 +138,7 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
         LongCompareExpressionOptimizer,
 
         DeMorganExpressionOptimizer,
+        BooleanConstantConditionalOperatorExpressionOptimizer,
 
         CastConstantsToExpectedTypeExpressionOptimizer,
     )
