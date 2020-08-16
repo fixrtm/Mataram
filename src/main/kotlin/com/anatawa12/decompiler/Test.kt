@@ -125,7 +125,9 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
 
         SingleConsumerSingleProducerStackValueStatementsOptimizer,
         SingleConsumerSingleProducerStackValueFromStackVariableStatementsOptimizer,
-        MultiConsumerSingleProducerStackValueStatementsOptimizer
+        MultiConsumerSingleProducerStackValueStatementsOptimizer,
+
+        NoConsumeSingleProducerStatementExpressionStatementOptimizer,
     )
 
     val expressionOptimizer = listOf<IExpressionOptimizer>(
