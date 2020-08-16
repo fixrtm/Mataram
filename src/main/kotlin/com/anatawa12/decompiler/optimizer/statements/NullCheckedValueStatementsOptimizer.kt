@@ -48,6 +48,8 @@ object NullCheckedValueStatementsOptimizer : IStatementsOptimizer {
                 it.addAll(assign2.mainStat.labelsTargetsMe)
                 it.addAll(assign3.mainStat.labelsTargetsMe)
             }
+
+            return true
         }
         return false
     }
