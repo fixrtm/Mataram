@@ -849,13 +849,21 @@ class InvokeVirtualValue(
     val isInterface: Boolean,
     self: Value,
     args: List<Value>
-) : ExpressionValue() {
+) : StatementExpressionValue() {
     var self by prop(self, ExpectTypes.Object)
     val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
     override val stackType by unsafeLazy { StackType.byType(type) }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        self.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -895,13 +903,21 @@ class InvokeSpecialValue(
     val isInterface: Boolean,
     self: Value,
     args: List<Value>
-) : ExpressionValue() {
+) : StatementExpressionValue() {
     var self by prop(self, ExpectTypes.Object)
     val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
     override val stackType by unsafeLazy { StackType.byType(type) }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        self.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -940,12 +956,19 @@ class InvokeStaticValue(
     val desc: String,
     val isInterface: Boolean,
     args: List<Value>
-) : ExpressionValue() {
+) : StatementExpressionValue() {
     val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
     override val stackType by unsafeLazy { StackType.byType(type) }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -977,13 +1000,21 @@ class InvokeStaticValue(
 }
 
 class InvokeInterfaceValue(val owner: String, val name: String, val desc: String, self: Value, args: List<Value>) :
-    ExpressionValue() {
+    StatementExpressionValue() {
     var self by prop(self, ExpectTypes.Object)
     val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
     override val stackType by unsafeLazy { StackType.byType(type) }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        self.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -1020,12 +1051,19 @@ class InvokeDynamicValue(
     val bootstrapMethodHandle: Handle,
     val bootstrapMethodArguments: List<Any>,
     args: List<Value>,
-) : ExpressionValue() {
+) : StatementExpressionValue() {
     val argProps = args.zip(Type.getArgumentTypes(descriptor)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getReturnType(descriptor) }
     override val stackType by unsafeLazy { StackType.byType(type) }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -1198,12 +1236,19 @@ class MultiANewArray(val arrayType: Type, dimensionSizes: List<Value>) : Express
 
 /// java expression variables
 
-class NewAndCallConstructor(val owner: String, val desc: String, args: List<Value>) : ExpressionValue() {
+class NewAndCallConstructor(val owner: String, val desc: String, args: List<Value>) : StatementExpressionValue() {
     val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
     val args = PropertyList(this, argProps)
 
     override val type by unsafeLazy { Type.getObjectType(owner) }
     override val stackType get() = StackType.Object
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -1275,7 +1320,7 @@ class Assign(variable: Variable<in Assign>, value: Value) : StatementExpressionV
     }
 }
 
-class NewArrayWithInitializerValue(val elementType: Type, arrayInitializer: List<Value>) : ExpressionValue() {
+class NewArrayWithInitializerValue(val elementType: Type, arrayInitializer: List<Value>) : StatementExpressionValue() {
     val arrayInitializerProps = arrayInitializer.map { prop(it, ExpectTypes.by(elementType)) }
     val arrayInitializer = PropertyList(this, arrayInitializerProps)
 
@@ -1284,6 +1329,13 @@ class NewArrayWithInitializerValue(val elementType: Type, arrayInitializer: List
 
     init {
         lineNumber = -2
+    }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        arrayInitializer.forEach {
+            it.lineNumber = line
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -1540,7 +1592,8 @@ class BooleanOrOrOperation(left: Value, right: Value) : ExpressionValue() {
     }
 }
 
-class InDecrementValue(val inDecrement: InDecrementType, variable: Variable<in InDecrementValue>) : ExpressionValue(),
+class InDecrementValue(val inDecrement: InDecrementType, variable: Variable<in InDecrementValue>) :
+    StatementExpressionValue(),
     IProducer {
     var variable by mutatingProp(variable, consumes = true)
 
@@ -1549,6 +1602,11 @@ class InDecrementValue(val inDecrement: InDecrementType, variable: Variable<in I
 
     init {
         lineNumber = -2
+    }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        variable.lineNumber = line
     }
 
     override fun equals(other: Any?): Boolean {
@@ -1626,7 +1684,7 @@ class InvokeStaticWithSelfValue(
     val isInterface: Boolean,
     self: Value,
     args: List<Value>
-) : ExpressionValue() {
+) : StatementExpressionValue() {
     var self by prop(self, ExpectTypes.Object)
 
     val argProps = args.zip(Type.getArgumentTypes(desc)).map { (v, t) -> prop(v, ExpectTypes.by(t)) }
@@ -1634,6 +1692,14 @@ class InvokeStaticWithSelfValue(
 
     override val type by unsafeLazy { Type.getReturnType(desc) }
     override val stackType by unsafeLazy { StackType.byType(type) }
+
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        self.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
