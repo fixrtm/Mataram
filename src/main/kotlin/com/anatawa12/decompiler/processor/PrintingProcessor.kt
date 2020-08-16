@@ -281,12 +281,21 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                 print(v.spInfo())
             }
             is ConstantValue -> {
-                if (v.value is VConstantString) {
-                    print('"')
-                    print(v.value.string)
-                    print('"')
-                } else {
-                    print(v.value.value)
+                when (val value = v.value) {
+                    is VConstantInt -> print(value.int)
+                    is VConstantLong -> print(value.long)
+                    is VConstantFloat -> print(value.float)
+                    is VConstantDouble -> print(value.double)
+                    is VConstantByte -> print(value.byte)
+                    is VConstantChar -> print("'${value.char}'")
+                    is VConstantShort -> print(value.short)
+                    is VConstantBoolean -> print(value.boolean)
+                    VConstantNull -> print("null")
+                    is VConstantString -> print("\"${value.string}\"")
+                    is VConstantType -> print("${value.type}.class")
+                    is VConstantMethodType -> print(value.type)
+                    is VConstantHandle -> print(value.handle)
+                    is VConstantConstantDynamic -> print(value.dynamic)
                 }
             }
             is ArrayVariable -> {
