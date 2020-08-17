@@ -134,10 +134,10 @@ class BlockBeginStatement() : Statement(), Iterable<Statement> {
 
     override fun iterator() = object : Iterator<Statement> {
         var current: Statement = this@BlockBeginStatement
-        override fun hasNext(): Boolean = current.next !is BlockEndStatement
+        override fun hasNext(): Boolean = current !is BlockEndStatement
 
         override fun next(): Statement {
-            if (current.next is BlockEndStatement)
+            if (current is BlockEndStatement)
                 throw NoSuchElementException()
             current = current.next
             return current
