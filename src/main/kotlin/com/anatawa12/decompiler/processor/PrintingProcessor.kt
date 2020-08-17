@@ -259,6 +259,14 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                 print(indent)
                 println("}")
             }
+            is WhileControlFlow -> {
+                val newIndent = "$indent  "
+                print("while (")
+                pe(s.condition)
+                println(") {")
+                printStatementsForBlock(s.block, newIndent)
+                println("}")
+            }
             else -> error("${s.javaClass}")
         }
     }

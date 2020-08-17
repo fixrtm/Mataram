@@ -893,3 +893,43 @@ class IfElseControlFlow(
         return "IfElseControlFlow(condition=$condition)"
     }
 }
+
+class WhileControlFlow(
+    condition: Value,
+    val block: BlockBeginStatement,
+    val continueLabel: StatLabel,
+    val breakLabel: StatLabel,
+) : JavaControlFlowStatement() {
+    var condition by prop(condition, ExpectTypes.Boolean)
+    override val childBlocks: List<BlockBeginStatement> get() = listOf(block)
+
+    init {
+        super.setLineNumber(-2)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as WhileControlFlow
+
+        if (condition != other.condition) return false
+        if (block != other.block) return false
+        if (continueLabel != other.continueLabel) return false
+        if (breakLabel != other.breakLabel) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = condition.hashCode()
+        result = 31 * result + block.hashCode()
+        result = 31 * result + continueLabel.hashCode()
+        result = 31 * result + breakLabel.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "WhileControlFlow(condition=$condition)"
+    }
+}
