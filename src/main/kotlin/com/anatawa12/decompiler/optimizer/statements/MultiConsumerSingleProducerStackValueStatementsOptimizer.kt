@@ -3,6 +3,7 @@ package com.anatawa12.decompiler.optimizer.statements
 import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import com.anatawa12.decompiler.util.Property
+import kotlinx.collections.immutable.plus
 
 /**
  * stk1 = var1
@@ -42,6 +43,7 @@ object MultiConsumerSingleProducerStackValueStatementsOptimizer : IStatementsOpt
             }
 
             assign.mainStat.removeMe()
+            assign.mainStat.next.labelsTargetsMe += assign.mainStat.labelsTargetsMe
 
             return true
         }
