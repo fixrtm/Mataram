@@ -207,7 +207,7 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                 pe(s.monitorObj)
             }
             is MonitorExit -> {
-                print("MonitorEnter ")
+                print("MonitorExit ")
                 pe(s.monitorObj)
             }
             is TryBlockStart -> {
