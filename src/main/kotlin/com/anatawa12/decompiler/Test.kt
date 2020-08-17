@@ -2,6 +2,7 @@ package com.anatawa12.decompiler
 
 import com.anatawa12.decompiler.instructions.InstructionConvertor
 import com.anatawa12.decompiler.optimizer.controlFlows.IfElseControlFlowOptimizer
+import com.anatawa12.decompiler.optimizer.controlFlows.SynchronizedFlowOptimizer
 import com.anatawa12.decompiler.optimizer.controlFlows.WhileControlFlowOptimizer
 import com.anatawa12.decompiler.optimizer.controlFlows.WhileTrueControlFlowOptimizer
 import com.anatawa12.decompiler.optimizer.expressions.*
@@ -131,6 +132,7 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
 
         NoConsumeSingleProducerStatementExpressionStatementOptimizer,
 
+        SynchronizedFlowOptimizer,
         IfElseControlFlowOptimizer,
         WhileControlFlowOptimizer,
         WhileTrueControlFlowOptimizer,

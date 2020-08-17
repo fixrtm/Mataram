@@ -940,3 +940,40 @@ class WhileControlFlow(
         return "WhileControlFlow(condition=$condition)"
     }
 }
+
+class SynchronizedFlow(
+    monitorObj: Value,
+    val block: BlockBeginStatement,
+    val breakLabel: StatLabel,
+) : JavaControlFlowStatement() {
+    var monitorObj by prop(monitorObj, ExpectTypes.Object)
+    override val childBlocks: List<BlockBeginStatement> get() = listOf(block)
+
+    init {
+        super.setLineNumber(-2)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as SynchronizedFlow
+
+        if (monitorObj != other.monitorObj) return false
+        if (block != other.block) return false
+        if (breakLabel != other.breakLabel) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = monitorObj.hashCode()
+        result = 31 * result + block.hashCode()
+        result = 31 * result + breakLabel.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "SynchronizedFlow(monitorObj=$monitorObj)"
+    }
+}

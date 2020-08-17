@@ -267,6 +267,15 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                 printStatementsForBlock(s.block, newIndent)
                 println("}")
             }
+            is SynchronizedFlow -> {
+                val newIndent = "$indent  "
+                print("synchronized (")
+                pe(s.monitorObj)
+                println(") {")
+                printStatementsForBlock(s.block, newIndent)
+                print(indent)
+                println("}")
+            }
             else -> error("${s.javaClass}")
         }
     }
