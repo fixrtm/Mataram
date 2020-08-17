@@ -120,7 +120,6 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
         ConditionalOperatorStatementsOptimizer,
         ConditionalOperatorAfterGotoStatementsOptimizer,
         BooleanOrOrOperationStatementsOptimizer,
-        MoveTryBlockEndToNextToGotoLikeStatementsOptimizer,
         NewArrayWithInitializerStatementsOptimizer,
 
         SingleConsumerSingleProducerStackValueStatementsOptimizer,
