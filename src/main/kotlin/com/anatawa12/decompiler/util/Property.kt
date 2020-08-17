@@ -10,11 +10,13 @@ open class Property<T, out A> constructor(value: T, val thisRef: A, val type: Cl
         }
     var onChange: (from: T, to: T) -> Unit = { _, _ -> }
 
+    // TODO: add Inline Modifier when KT-41105 has been resolved
     @Suppress("NOTHING_TO_INLINE")
-    inline operator fun getValue(thisRef: Any?, property: KProperty<*>) = value
+    operator fun getValue(thisRef: Any?, property: KProperty<*>) = value
 
+    // TODO: add Inline Modifier when KT-41105 has been resolved
     @Suppress("NOTHING_TO_INLINE")
-    inline operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
         this.value = value
     }
 
