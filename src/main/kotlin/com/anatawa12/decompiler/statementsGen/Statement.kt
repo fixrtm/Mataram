@@ -9,6 +9,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Type
+import java.util.concurrent.atomic.AtomicInteger
 
 sealed class Statement {
     var coreSignature: MethodCoreSignature? = null
@@ -668,6 +669,16 @@ class TryCatchBlockIdentifier(val catchesInternalName: String?) {
             check(value != null)
             field = value
         }
+
+    override fun toString(): String {
+        return "TryCatchBlockIdentifier($id)"
+    }
+
+    val id = nextId.getAndIncrement().toString().padStart(5, '0')
+
+    companion object {
+        private val nextId = AtomicInteger(0)
+    }
 }
 
 class TryBlockStart(val identifier: TryCatchBlockIdentifier) : Statement() {
@@ -695,6 +706,7 @@ class TryBlockStart(val identifier: TryCatchBlockIdentifier) : Statement() {
     override fun toString(): String {
         return "TryBlockStart(identifier=$identifier)"
     }
+
 }
 
 class TryBlockEnd(val identifier: TryCatchBlockIdentifier) : Statement() {
