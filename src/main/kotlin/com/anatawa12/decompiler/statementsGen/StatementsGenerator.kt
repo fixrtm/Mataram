@@ -29,7 +29,7 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
     private operator fun Statement.unaryPlus() {
         this.labelsTargetsMe = nextLabels.toPersistentList()
         nextLabels.clear()
-        this.coreSignature = coreSignature
+        this.coreSignature = this@StatementsGenerator.coreSignature
         setLineNumber(currentLineNumber)
         end.insertPrev(this)
     }
