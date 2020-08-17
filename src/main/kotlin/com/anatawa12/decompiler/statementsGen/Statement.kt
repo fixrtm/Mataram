@@ -19,6 +19,8 @@ sealed class Statement {
     val consumes = mutableSetOf<ValueProperty<*, Statement>>()
     val produces = identitySetOf<Property<out Variable<*>, Statement>>()
 
+    open val childBlocks = listOf<BlockBeginStatement>()
+
     private var labelsTargetsMeBack: PersistentList<StatLabel>? = null
     var labelsTargetsMe: PersistentList<StatLabel>
         get() = labelsTargetsMeBack ?: error("not initialized")
@@ -123,7 +125,7 @@ fun <V, T> V.mutatingProp(value: T, consumes: Boolean, type: Class<T>)
         }
     }
 
-class MethodBeginStatement() : Statement(), Iterable<Statement> {
+class BlockBeginStatement() : Statement(), Iterable<Statement> {
     init {
         labelsTargetsMe = persistentListOf()
     }
@@ -131,11 +133,11 @@ class MethodBeginStatement() : Statement(), Iterable<Statement> {
     fun makeList(): ImmutableList<Statement> = toImmutableList()
 
     override fun iterator() = object : Iterator<Statement> {
-        var current: Statement = this@MethodBeginStatement
-        override fun hasNext(): Boolean = current.next !is MethodEndStatement
+        var current: Statement = this@BlockBeginStatement
+        override fun hasNext(): Boolean = current.next !is BlockEndStatement
 
         override fun next(): Statement {
-            if (current.next is MethodEndStatement)
+            if (current.next is BlockEndStatement)
                 throw NoSuchElementException()
             current = current.next
             return current
@@ -149,7 +151,7 @@ class MethodBeginStatement() : Statement(), Iterable<Statement> {
     override fun toString(): String = "MethodBeginStatement"
 }
 
-class MethodEndStatement() : Statement() {
+class BlockEndStatement() : Statement() {
     override fun equals(other: Any?): Boolean = this === other
 
     override fun hashCode(): Int = System.identityHashCode(this)
@@ -823,3 +825,8 @@ class InvokeStaticWithSelfVoid(
     }
 }
 
+/////////// java control flow
+
+sealed class JavaControlFlowStatement : Statement() {
+    abstract override val childBlocks: List<BlockBeginStatement>
+}

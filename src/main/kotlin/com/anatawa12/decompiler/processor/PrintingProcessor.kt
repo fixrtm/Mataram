@@ -46,10 +46,10 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
 
         @Suppress("REDUNDANT_ELSE_IN_WHEN")
         when (s) {
-            is MethodBeginStatement -> {
+            is BlockBeginStatement -> {
                 print("/// start")
             }
-            is MethodEndStatement -> {
+            is BlockEndStatement -> {
                 print("/// end")
             }
             is StatementExpressionStatement -> {

@@ -17,8 +17,8 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
         locals[variable] = local?.let(::LocalVariable)
     }
 
-    private val start = MethodBeginStatement()
-    private val end = MethodEndStatement()
+    private val start = BlockBeginStatement()
+    private val end = BlockEndStatement()
     private var currentLineNumber: Int = -1
 
     init {
@@ -754,7 +754,7 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
     }
 
     override fun endInstructions() {
-        +MethodEndStatement()
+        +BlockEndStatement()
     }
 
     private fun verifyLocal(index: Int, localVariable: LocalVariable?) {

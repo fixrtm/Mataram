@@ -26,6 +26,14 @@ class OptimizeProcessor(
                 return true
         }
 
+        for (statement in statements) {
+            for (childBlock in statement.childBlocks) {
+                val modified = doOptimize(childBlock, ctx)
+                if (modified)
+                    return true
+            }
+        }
+
         // statement optimizer cannot process so run expression optimizer
 
         var modified = false
