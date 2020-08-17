@@ -2,6 +2,7 @@ package com.anatawa12.decompiler.statementsGen
 
 import com.anatawa12.decompiler.instructions.*
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.plus
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import org.objectweb.asm.Handle
@@ -27,7 +28,15 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
     }
 
     private operator fun Statement.unaryPlus() {
-        this.labelsTargetsMe = nextLabels.toPersistentList()
+        val defines = mutableListOf<StatLabel>()
+        for (nextLabel in nextLabels) {
+            if (nextLabel in shouldDefines) {
+                defines += nextLabel
+            } else {
+                defineAts[nextLabel] = this@unaryPlus
+            }
+        }
+        this.labelsTargetsMe = defines.toPersistentList()
         nextLabels.clear()
         this.coreSignature = this@StatementsGenerator.coreSignature
         setLineNumber(currentLineNumber)
@@ -662,7 +671,7 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
     private val nextLabels = mutableListOf<StatLabel>()
 
     override fun mark(label: Label) {
-        nextLabels += getStatLabel(label)
+        nextLabels += getStatLabel(label, isDefinition = true)
     }
 
     override fun markLine(line: Int) {
@@ -822,8 +831,22 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
         }
     }
 
+    private val shouldDefines = mutableSetOf<StatLabel>()
+    private val defineAts = mutableMapOf<StatLabel, Statement>()
     private val statLabels = mutableMapOf<Label, StatLabel>()
-    private fun getStatLabel(l: Label): StatLabel = statLabels.computeIfAbsent(l, ::StatLabel)
+    private fun getStatLabel(l: Label): StatLabel = getStatLabel(l, false)
+    private fun getStatLabel(l: Label, isDefinition: Boolean): StatLabel {
+        val label = statLabels.computeIfAbsent(l, ::StatLabel)
+        if (!isDefinition) {
+            val defineAt = defineAts[label]
+            shouldDefines += label
+            if (defineAt != null) {
+                defineAt.labelsTargetsMe += label
+                defineAts.remove(label)
+            }
+        }
+        return label
+    }
 
     private class StackInfo(
         val insnAfter: Statement,
