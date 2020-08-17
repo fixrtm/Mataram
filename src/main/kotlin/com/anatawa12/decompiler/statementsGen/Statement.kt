@@ -79,9 +79,16 @@ sealed class Statement {
     }
 
     operator fun get(index: Int): Statement {
-        var cur = this
-        repeat(index) { cur = cur.next }
-        return cur
+        if (index == 0) return this
+        if (index < 0) {
+            var cur = this
+            repeat(-index) { cur = cur.prev }
+            return cur
+        } else {
+            var cur = this
+            repeat(index) { cur = cur.next }
+            return cur
+        }
     }
 
     open fun setLineNumber(line: Int) {
