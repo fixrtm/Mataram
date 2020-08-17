@@ -52,6 +52,39 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
         }
     }
 
+    override fun localVariable(
+        name: String,
+        descriptor: String,
+        signature: String?,
+        start: Label,
+        end: Label,
+        index: Int
+    ) {
+        localVariables += LocalVariableInfo(name, descriptor, signature, getStatLabel(start), getStatLabel(end), index)
+    }
+
+    private val startTryCatches = mutableMapOf<StatLabel, MutableSet<TryCatchBlockIdentifier>>()
+    private val endTryCatches = mutableMapOf<StatLabel, MutableSet<TryCatchBlockIdentifier>>()
+    private val handlerTryCatches = mutableMapOf<StatLabel, MutableSet<TryCatchBlockIdentifier>>()
+    override fun tryCatchBlock(start: Label, end: Label, handler: Label, catchesInternalName: String?) {
+        val startStat = getStatLabel(start)
+        val endStat = getStatLabel(end)
+        val handlerStat = getStatLabel(handler)
+
+        val identifier = TryCatchBlockIdentifier(
+            catchesInternalName = catchesInternalName,
+            tryStartLabel = startStat,
+            tryEndLabel = endStat,
+            catchStartLabel = handlerStat,
+        )
+
+        startTryCatches.computeIfAbsent(startStat) { mutableSetOf() }.add(identifier)
+        endTryCatches.computeIfAbsent(endStat) { mutableSetOf() }.add(identifier)
+        handlerTryCatches.computeIfAbsent(handlerStat) { mutableSetOf() }.add(identifier)
+    }
+
+    /// instructions
+
     @OptIn(ExperimentalStdlibApi::class)
     private fun pops(count: Int) = List(count) { stack.removeLast().identifier }
 
@@ -720,45 +753,6 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
         }
     }
 
-    override fun localVariable(
-        name: String,
-        descriptor: String,
-        signature: String?,
-        start: Label,
-        end: Label,
-        index: Int
-    ) {
-        localVariables += LocalVariableInfo(name, descriptor, signature, getStatLabel(start), getStatLabel(end), index)
-    }
-
-    private val startTryCatches = mutableMapOf<StatLabel, MutableSet<TryCatchBlockIdentifier>>()
-    private val endTryCatches = mutableMapOf<StatLabel, MutableSet<TryCatchBlockIdentifier>>()
-    private val handlerTryCatches = mutableMapOf<StatLabel, MutableSet<TryCatchBlockIdentifier>>()
-    override fun tryCatchBlock(start: Label, end: Label, handler: Label, catchesInternalName: String?) {
-        val startStat = getStatLabel(start)
-        val endStat = getStatLabel(end)
-        val handlerStat = getStatLabel(handler)
-        val startAt = startStat.at
-        val endAt = endStat.at
-        val handlerAt = handlerStat.at
-
-        val identifier = TryCatchBlockIdentifier(catchesInternalName)
-
-        if (startAt == null) startTryCatches.computeIfAbsent(startStat) { mutableSetOf() }.add(identifier)
-        else startAt.insertPrev(TryBlockStart(identifier))
-
-        if (endAt == null) endTryCatches.computeIfAbsent(endStat) { mutableSetOf() }.add(identifier)
-        else endAt.insertPrev(TryBlockEnd(identifier))
-
-        if (handlerAt == null) {
-            handlerTryCatches.computeIfAbsent(handlerStat) { mutableSetOf() }.add(identifier)
-        } else {
-            val stackInfo = stackInfos[handlerStat]!!.single()
-            check(stackInfo.isDefinition)
-            handlerAt.insertPrev(CatchBlockStart(identifier, StackVariable.cloneBy(stackInfo.stack.last())))
-        }
-    }
-
     override fun endInstructions() {
         +MethodEndStatement()
     }
@@ -789,6 +783,7 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
                 end.insertPrev(TryBlockEnd(it))
             }
             startTryCatches[nextLabel]?.forEach {
+                applyStackInfo(it.catchStartLabel, onlyLocals = true)
                 end.insertPrev(TryBlockStart(it))
             }
             handlerTryCatches[nextLabel]?.forEach {
@@ -798,12 +793,13 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
         wasGoto = false
     }
 
-    private fun applyStackInfo(label: StatLabel, isDefinition: Boolean = false) {
+    private fun applyStackInfo(label: StatLabel, isDefinition: Boolean = false, onlyLocals: Boolean = false) {
         val definitionInfo = StackInfo(
             end.prev,
             locals.toImmutableList(),
             stack.toImmutableList(),
-            isDefinition
+            isDefinition,
+            onlyLocals
         )
 
         val old = stackInfos[label]
@@ -834,10 +830,11 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
         val locals: ImmutableList<LocalVariable?>,
         val stack: ImmutableList<StackVariable>,
         val isDefinition: Boolean,
+        val onlyLocals: Boolean
     ) {
         init {
             if (isDefinition) {
-                print("")
+                require(!onlyLocals)
             }
         }
 
@@ -852,6 +849,7 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
                     a.merge(b)
                 }
             }
+            if (definitionInfo.onlyLocals) return
             for ((a, b) in stack.zip(definitionInfo.stack)) {
                 a.merge(b)
             }

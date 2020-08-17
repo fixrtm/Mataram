@@ -3,7 +3,9 @@ package com.anatawa12.decompiler.instructions
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter
 import org.objectweb.asm.tree.LineNumberNode
+import org.objectweb.asm.tree.LocalVariableNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.TryCatchBlockNode
 
 object InstructionConvertor {
     fun convertFromNode(
@@ -15,6 +17,29 @@ object InstructionConvertor {
             .filterIsInstance<LineNumberNode>()
             .map { it.start.label to it.line }
             .toMap()
+
+        for (instruction in node.instructions) {
+            when (instruction) {
+                is LocalVariableNode -> {
+                    visitor.localVariable(
+                        name = instruction.name,
+                        descriptor = instruction.desc,
+                        signature = instruction.signature,
+                        start = instruction.start.label,
+                        end = instruction.end.label,
+                        index = instruction.index,
+                    )
+                }
+                is TryCatchBlockNode -> {
+                    visitor.tryCatchBlock(
+                        start = instruction.start.label,
+                        end = instruction.end.label,
+                        handler = instruction.handler.label,
+                        catchesInternalName = instruction.type,
+                    )
+                }
+            }
+        }
 
         val runner = InstructionConvertorRunner(
             classInternalName,

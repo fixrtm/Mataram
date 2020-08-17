@@ -5,6 +5,10 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 
 interface InstructionVisitor {
+    // call before instructions
+    fun localVariable(name: String, descriptor: String, signature: String?, start: Label, end: Label, index: Int)
+    fun tryCatchBlock(start: Label, end: Label, handler: Label, catchesInternalName: String?)
+
     fun nop()
     fun const(value: InsnConstantValue)
     fun load(variable: Int, type: StackType)
@@ -66,8 +70,6 @@ interface InstructionVisitor {
     fun markLine(line: Int)
 
     fun frame(locals: List<FrameElement>, stacks: List<FrameElement>)
-    fun localVariable(name: String, descriptor: String, signature: String?, start: Label, end: Label, index: Int)
-    fun tryCatchBlock(start: Label, end: Label, handler: Label, catchesInternalName: String?)
 
     fun endInstructions()
 }

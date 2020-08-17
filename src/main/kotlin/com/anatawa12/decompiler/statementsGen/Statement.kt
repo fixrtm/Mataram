@@ -650,7 +650,12 @@ class MonitorExit(monitorObj: Value) : Statement() {
 
 /// try-catch
 
-class TryCatchBlockIdentifier(val catchesInternalName: String?) {
+class TryCatchBlockIdentifier(
+    val catchesInternalName: String?,
+    val tryStartLabel: StatLabel,
+    val tryEndLabel: StatLabel,
+    val catchStartLabel: StatLabel,
+) {
     var tryStart: TryBlockStart? = null
         set(value) {
             check(field == null)
