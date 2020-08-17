@@ -1,6 +1,7 @@
 package com.anatawa12.decompiler
 
 import com.anatawa12.decompiler.instructions.InstructionConvertor
+import com.anatawa12.decompiler.optimizer.controlFlows.IfElseControlFlowOptimizer
 import com.anatawa12.decompiler.optimizer.expressions.*
 import com.anatawa12.decompiler.optimizer.statements.*
 import com.anatawa12.decompiler.processor.OptimizeProcessor
@@ -127,6 +128,8 @@ fun generateForMethodNode(node: ClassNode, method: MethodNode, ctx: ProcessorCon
         MultiConsumerSingleProducerStackValueStatementsOptimizer,
 
         NoConsumeSingleProducerStatementExpressionStatementOptimizer,
+
+        IfElseControlFlowOptimizer,
     )
 
     val expressionOptimizer = listOf<IExpressionOptimizer>(

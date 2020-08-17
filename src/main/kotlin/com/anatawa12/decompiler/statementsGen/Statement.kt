@@ -128,6 +128,7 @@ fun <V, T> V.mutatingProp(value: T, consumes: Boolean, type: Class<T>)
 class BlockBeginStatement() : Statement(), Iterable<Statement> {
     init {
         labelsTargetsMe = persistentListOf()
+        super.setLineNumber(-2)
     }
 
     fun makeList(): ImmutableList<Statement> = toImmutableList()
@@ -149,9 +150,31 @@ class BlockBeginStatement() : Statement(), Iterable<Statement> {
     override fun hashCode(): Int = System.identityHashCode(this)
 
     override fun toString(): String = "MethodBeginStatement"
+
+    companion object {
+        fun makeBlockByBeginEnd(begin: Statement, end: Statement): Pair<BlockBeginStatement, BlockEndStatement> {
+            val beginStat = BlockBeginStatement()
+            val endStat = BlockEndStatement()
+            begin.prev.next = end.next
+            end.next.prev = begin.prev
+
+            begin.prev = beginStat
+            beginStat.next = begin
+
+            endStat.prev = end
+            end.next = endStat
+
+            return beginStat to endStat
+        }
+    }
 }
 
 class BlockEndStatement() : Statement() {
+    init {
+        labelsTargetsMe = persistentListOf()
+        super.setLineNumber(-2)
+    }
+
     override fun equals(other: Any?): Boolean = this === other
 
     override fun hashCode(): Int = System.identityHashCode(this)
@@ -829,4 +852,44 @@ class InvokeStaticWithSelfVoid(
 
 sealed class JavaControlFlowStatement : Statement() {
     abstract override val childBlocks: List<BlockBeginStatement>
+}
+
+class IfElseControlFlow(
+    condition: Value,
+    val thenBlock: BlockBeginStatement,
+    val elseBlock: BlockBeginStatement,
+    val breakLabel: StatLabel,
+) : JavaControlFlowStatement() {
+    var condition by prop(condition, ExpectTypes.Boolean)
+    override val childBlocks: List<BlockBeginStatement> get() = listOf(thenBlock, elseBlock)
+
+    init {
+        super.setLineNumber(-2)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as IfElseControlFlow
+
+        if (condition != other.condition) return false
+        if (thenBlock != other.thenBlock) return false
+        if (elseBlock != other.elseBlock) return false
+        if (breakLabel != other.breakLabel) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = condition.hashCode()
+        result = 31 * result + thenBlock.hashCode()
+        result = 31 * result + elseBlock.hashCode()
+        result = 31 * result + breakLabel.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "IfElseControlFlow(condition=$condition)"
+    }
 }

@@ -37,7 +37,8 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
         }
     }
 
-    private fun ps(s: Statement) {
+    private fun ps(s: Statement, indent: String = "") {
+        print(indent)
         if (s.lineNumber != -2) {
             print("#")
             print(s.lineNumber)
@@ -246,7 +247,36 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                     print(s.desc)
                 }
             }
+            is IfElseControlFlow -> {
+                val newIndent = "$indent  "
+                print("if (")
+                pe(s.condition)
+                println(") {")
+                printStatementsForBlock(s.thenBlock, newIndent)
+                print(indent)
+                println("} else {")
+                printStatementsForBlock(s.elseBlock, newIndent)
+                print(indent)
+                println("}")
+            }
             else -> error("${s.javaClass}")
+        }
+    }
+
+    private fun printStatementsForBlock(statements: Iterable<Statement>, newIndent: String) {
+        for (statement in statements) {
+            for (label in statement.labelsTargetsMe) {
+                print(newIndent)
+                print("    ")
+                print(label)
+                print('(')
+                print(label.usedBy.size)
+                print("):")
+                println()
+            }
+            if (statement is BlockEndStatement) continue
+            ps(statement, newIndent)
+            println()
         }
     }
 
