@@ -1,45 +1,45 @@
 package com.anatawa12.decompiler.optimizer.controlFlows
 
-import com.anatawa12.decompiler.optimizer.statements.IStatementsOptimizer
 import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.plus
+import org.objectweb.asm.Label
 
 /**
  * L_01: // continue target
- * goto L_02 if a
  * statements1
  * goto L_01
  * L_02: // break target
  *
  * L_01:
- * while(!a) {
+ * while(true) {
  *   statements1
  * }
  * L_02:
  */
-object WhileControlFlowOptimizer : IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
+object WhileTrueControlFlowGenerator : IFlowGenerator {
+    override fun generate(statements: Iterable<Statement>, method: StatementsMethod, ctx: ProcessorContext): Boolean {
         loop@ for (statement in statements) {
-            val conditionalGoto = statement as? ConditionalGoto ?: continue@loop
-            val label02 = conditionalGoto.label
-            val label02At = label02.at!!
-            val goto = label02At.prev as? Goto ?: continue@loop
+            val goto = statement as? Goto ?: continue@loop
             val label01 = goto.label
             val label01At = label01.at!!
 
-            if (label01 !in conditionalGoto.labelsTargetsMe) continue@loop
-            if (!isContainsAfter(conditionalGoto, goto)) continue@loop
-            check(label01At == conditionalGoto)
+            if (!isContainsAfter(label01At, goto)) continue@loop
 
-            conditionalGoto.removeMe()
             goto.removeMe()
+            val label02 = goto.next.labelsTargetsMe.firstOrNull() ?: kotlin.run {
+                val newLabel = StatLabel(Label())
+                goto.next.labelsTargetsMe += newLabel
+                newLabel
+            }
 
             val statements1 = BlockBeginStatement.makeBlockByBeginEnd(
-                begin = conditionalGoto.next,
+                begin = label01At,
                 end = goto.prev,
             )
             val whileFlow = WhileControlFlow(
-                condition = BooleanNotValue(conditionalGoto.value),
+                condition = ConstantValue(VConstantBoolean(true)),
                 block = statements1.first,
                 continueLabel = label01,
                 breakLabel = label02,
@@ -47,7 +47,7 @@ object WhileControlFlowOptimizer : IStatementsOptimizer {
 
             goto.next.insertPrev(whileFlow)
 
-            whileFlow.labelsTargetsMe = conditionalGoto.labelsTargetsMe
+            whileFlow.labelsTargetsMe = persistentListOf()
             statements1.second.labelsTargetsMe = goto.labelsTargetsMe
 
             return true

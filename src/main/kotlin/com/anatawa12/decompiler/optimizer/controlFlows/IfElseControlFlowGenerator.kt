@@ -1,6 +1,5 @@
 package com.anatawa12.decompiler.optimizer.controlFlows
 
-import com.anatawa12.decompiler.optimizer.statements.IStatementsOptimizer
 import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 
@@ -22,8 +21,8 @@ import com.anatawa12.decompiler.statementsGen.*
  * }
  * L_02:
  */
-object IfElseControlFlowOptimizer : IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
+object IfElseControlFlowGenerator : IFlowGenerator {
+    override fun generate(statements: Iterable<Statement>, method: StatementsMethod, ctx: ProcessorContext): Boolean {
         loop@ for (statement in statements) {
             val conditionalGoto = statement as? ConditionalGoto ?: continue@loop
             val label01 = conditionalGoto.label

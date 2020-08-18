@@ -2,7 +2,6 @@
 
 package com.anatawa12.decompiler.optimizer.controlFlows
 
-import com.anatawa12.decompiler.optimizer.statements.IStatementsOptimizer
 import com.anatawa12.decompiler.processor.ProcessorContext
 import com.anatawa12.decompiler.statementsGen.*
 import kotlinx.collections.immutable.persistentListOf
@@ -34,8 +33,8 @@ import org.objectweb.asm.Label
  * Labels2:
  * unknownStat
  */
-object SynchronizedFlowOptimizer : IStatementsOptimizer {
-    override fun optimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
+object SynchronizedFlowGenerator : IFlowGenerator {
+    override fun generate(statements: Iterable<Statement>, method: StatementsMethod, ctx: ProcessorContext): Boolean {
         loop@ for (statement in statements) {
             //@formatter:off
             val stat00: MonitorEnter    = statement[0] as? MonitorEnter ?: return false

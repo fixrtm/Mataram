@@ -1,5 +1,6 @@
 package com.anatawa12.decompiler.processor
 
+import com.anatawa12.decompiler.optimizer.controlFlows.IFlowGenerator
 import com.anatawa12.decompiler.optimizer.expressions.IExpressionOptimizer
 import com.anatawa12.decompiler.optimizer.statements.IStatementsOptimizer
 import com.anatawa12.decompiler.statementsGen.Statement
@@ -9,17 +10,18 @@ import com.anatawa12.decompiler.util.Property
 
 class OptimizeProcessor(
     private val statementOptimizer: List<IStatementsOptimizer>,
+    private val flowGenerators: List<IFlowGenerator>,
     private val expressionOptimizer: List<IExpressionOptimizer>,
 ) : IProcessor {
     override fun process(method: StatementsMethod, ctx: ProcessorContext) {
         while (true) {
-            val modified = doOptimize(method.beginStatement, ctx)
+            val modified = doOptimize(method.beginStatement, method, ctx)
             if (!modified)
                 break
         }
     }
 
-    private fun doOptimize(statements: Iterable<Statement>, ctx: ProcessorContext): Boolean {
+    private fun doOptimize(statements: Iterable<Statement>, method: StatementsMethod, ctx: ProcessorContext): Boolean {
         for (optimizer in statementOptimizer) {
             val modified = optimizer.optimize(statements, ctx)
             if (modified)
@@ -28,10 +30,15 @@ class OptimizeProcessor(
 
         for (statement in statements) {
             for (childBlock in statement.childBlocks) {
-                val modified = doOptimize(childBlock, ctx)
+                val modified = doOptimize(childBlock, method, ctx)
                 if (modified)
                     return true
             }
+        }
+        for (primaryGenerator in flowGenerators) {
+            val modified = primaryGenerator.generate(statements, method, ctx)
+            if (modified)
+                return true
         }
 
         // statement optimizer cannot process so run expression optimizer
