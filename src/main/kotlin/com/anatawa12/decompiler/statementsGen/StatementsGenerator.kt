@@ -27,15 +27,18 @@ class StatementsGenerator(val coreSignature: MethodCoreSignature) : InstructionV
         end.prev = start
     }
 
+    private var sortingIndex = 0
     private operator fun Statement.unaryPlus() {
         val defines = mutableListOf<StatLabel>()
         for (nextLabel in nextLabels) {
+            nextLabel.sortingIndex = sortingIndex
             if (nextLabel in shouldDefines) {
                 defines += nextLabel
             } else {
                 defineAts[nextLabel] = this@unaryPlus
             }
         }
+        sortingIndex++
         this.labelsTargetsMe = defines.toPersistentList()
         nextLabels.clear()
         this.coreSignature = this@StatementsGenerator.coreSignature
