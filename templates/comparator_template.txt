@@ -1,0 +1,41 @@
+
+private val tryCatches = mutableMapOf<TryCatchBlockIdentifier, TryCatchBlockIdentifier>()
+private val localVariables = mutableMapOf<Int, Int>()
+private val stackVariables = mutableMapOf<StackVariableIdentifier, StackVariableIdentifier>()
+
+%%
+
+#for-stat TryBlockStart
+if (tryCatches.getOrPut(a.identifier, b::identifier) != b.identifier) return false
+#end
+
+#for-stat TryBlockEnd
+if (tryCatches.getOrPut(a.identifier, b::identifier) != b.identifier) return false
+#end
+
+#for-stat CatchBlockStart
+if (tryCatches.getOrPut(a.identifier, b::identifier) != b.identifier) return false
+if (!isSameExp(a.catchVariable, b.catchVariable)) return false
+#end
+
+#for-stat TryBlockStart
+if (tryCatches.getOrPut(a.identifier, b::identifier) != b.identifier) return false
+#end
+
+#for-stat BlockBeginStatement
+#end
+
+#for-stat BlockEndStatement
+#end
+
+#for-expr LocalVariable
+if (localVariables.getOrPut(a.index, b::index) != b.index) return false
+#end
+
+#for-expr StackVariable
+if (stackVariables.getOrPut(a.identifier, b::identifier) != b.identifier) return false
+#end
+
+#for-expr TemporaryExpressionValue
+error("TemporaryExpressionValue cannot be compare")
+#end

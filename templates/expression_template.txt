@@ -1,0 +1,690 @@
+@file:Suppress("ACTUAL_WITHOUT_EXPECT")
+
+package com.anatawa12.decompiler.statementsGen
+
+import com.anatawa12.decompiler.instructions.AllType
+import com.anatawa12.decompiler.instructions.BiOp
+import com.anatawa12.decompiler.instructions.ShiftOp
+import com.anatawa12.decompiler.instructions.StackType
+import com.anatawa12.decompiler.util.*
+import org.objectweb.asm.ConstantDynamic
+import org.objectweb.asm.Handle
+import org.objectweb.asm.Type
+import java.lang.invoke.MethodHandle
+import java.lang.invoke.MethodType
+
+actual sealed class Value {
+    actual var lineNumber: Int = -1
+        @JvmName("setLineNumberImpl") internal set(value) {
+            if (field != -2)
+                field = value
+        }
+    actual val consumes = mutableSetOf<ValueProperty<*, Value>>()
+    actual val produces = identitySetOf<Property<out Variable<*>, Value>>()
+
+    actual abstract val type: Type?
+    actual abstract val stackType: StackType
+
+    actual abstract fun consumeByExpression(value: ValueProperty<*, Value>)
+    actual abstract fun consumeByStatement(statement: ValueProperty<*, Statement>)
+    actual abstract fun unConsumeByExpression(value: ValueProperty<*, Value>)
+    actual abstract fun unConsumeByStatement(statement: ValueProperty<*, Statement>)
+
+    actual inline fun <reified T : Value> prop(value: T, noinline expectedTypeGetter: () -> ExpectTypes) =
+        prop(value, T::class.java, expectedTypeGetter)
+
+    actual inline fun <reified T : Value> prop(value: T, expectedType: ExpectTypes) =
+        prop(value, T::class.java, { expectedType })
+
+    fun <T : Value> prop(value: T, type: Class<T>, expectedTypeGetter: () -> ExpectTypes) =
+        ValueProperty(value, this, type, expectedTypeGetter).also { prop ->
+            consumes += prop
+            value.consumeByExpression(prop)
+            prop.onChange = { from, to ->
+                from.unConsumeByExpression(prop)
+                to.consumeByExpression(prop)
+            }
+        }
+
+    actual open fun dispose() {
+        for (consume in consumes) {
+            consume.value.unConsumeByExpression(consume)
+        }
+    }
+}
+
+actual sealed class Variable<Producer : IProducer> : Value() {
+    actual abstract val leastType: Class<Producer>
+    actual abstract fun addProducer(producer: Producer)
+    actual abstract fun removeProducer(producer: Producer)
+}
+
+actual sealed class IdentifierVariable<Identifier, VariableImpl, Producer> actual constructor(identifier: Identifier) : Variable<Producer>()
+        where Identifier : IdentifierVariableIdentifier<Identifier, VariableImpl, Producer>,
+              VariableImpl : IdentifierVariable<Identifier, VariableImpl, Producer>,
+              Producer : IProducer {
+    @Suppress("UNCHECKED_CAST")
+    private val self
+        get() = this as VariableImpl
+
+    actual var identifier: Identifier = identifier
+        set(value) {
+            // Suppress for first assign
+            @Suppress("SENSELESS_COMPARISON")
+            if (field != null) field.usedBy.remove(this)
+            field = value
+            field.usedBy.add(self)
+        }
+
+    init {
+        identifier.usedBy.add(self)
+    }
+
+    actual open fun mergeImpl(b: VariableImpl): Identifier = identifier.merge(b.identifier)
+
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
+        identifier.consumerExpressions += value
+    }
+
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
+        identifier.consumerStatements += statement
+    }
+
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
+        identifier.consumerExpressions -= value
+    }
+
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
+        identifier.consumerStatements -= statement
+    }
+
+    override fun addProducer(producer: Producer) {
+        check(identifier.producers.add(producer))
+    }
+
+    override fun removeProducer(producer: Producer) {
+        check(identifier.producers.remove(producer))
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as IdentifierVariable<*, *, *>
+
+        if (identifier != other.identifier) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return identifier.hashCode()
+    }
+
+    override fun toString(): String = "${this@IdentifierVariable.javaClass.simpleName}(" +
+            "${identifier.id}${identifier.spInfo()}(${identifier.type ?: identifier.stackType}))"
+}
+
+actual class LocalVariable : IdentifierVariable<LocalVariableIdentifier, LocalVariable, IProducer> {
+    actual val index: Int get() = identifier.index
+    override val stackType: StackType get() = identifier.stackType
+    override val type: Type? get() = identifier.type
+
+    actual constructor(index: Int, stackType: StackType) : super(LocalVariableIdentifier(index, stackType, null))
+
+    actual constructor(index: Int, type: Type) : super(LocalVariableIdentifier(index, StackType.byType(type), type))
+
+    actual constructor(identifier: LocalVariableIdentifier) : super(identifier)
+
+    override val leastType: Class<IProducer> get() = IProducer::class.java
+
+    actual fun merge(b: LocalVariable) {
+        check(index == b.index)
+        mergeImpl(b)
+    }
+}
+
+actual class StackVariable : IdentifierVariable<StackVariableIdentifier, StackVariable, IStackProducer> {
+    override val stackType: StackType get() = identifier.stackType
+    override val type: Type? get() = identifier.type
+
+    actual constructor(stackType: StackType) : super(StackVariableIdentifier(stackType, null))
+
+    actual constructor(type: Type) : super(StackVariableIdentifier(StackType.byType(type), type))
+
+    actual constructor(identifier: StackVariableIdentifier) : super(identifier)
+
+    override val leastType: Class<IStackProducer> get() = IStackProducer::class.java
+
+    actual fun merge(b: StackVariable) {
+        mergeImpl(b)
+    }
+
+    actual companion object {
+        actual fun cloneBy(id: StackVariableIdentifier) = StackVariableIdentifier(id.stackType, id.type).value()
+        actual fun cloneBy(id: StackVariable) = StackVariableIdentifier(id.stackType, id.type).value()
+    }
+}
+
+actual sealed class ExpressionVariable : Variable<IProducer>() {
+    actual var consumer: ValueProperty<*, Value>? = null
+    actual var consumerStatement: ValueProperty<*, Statement>? = null
+    actual var producer: IProducer? = null
+
+    override val leastType: Class<IProducer> get() = IProducer::class.java
+
+    override fun addProducer(producer: IProducer) {
+        check(this.producer == null)
+        this.producer = producer
+    }
+
+    override fun removeProducer(producer: IProducer) {
+        check(this.producer === producer)
+        this.producer = null
+    }
+
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
+        check(consumer == null && consumerStatement == null)
+        consumer = value
+    }
+
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
+        check(consumer == null && consumerStatement == null)
+        consumerStatement = statement
+    }
+
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
+        require(value == consumer)
+        consumer = null
+    }
+
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
+        require(statement == consumerStatement)
+        consumerStatement = null
+    }
+}
+
+actual sealed class ExpressionValue : Value() {
+    actual val anyConsumer get() = consumer ?: consumerStatement
+    actual var consumer: ValueProperty<*, Value>? = null
+    actual var consumerStatement: ValueProperty<*, Statement>? = null
+
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
+        check(consumer == null && consumerStatement == null)
+        consumer = value
+    }
+
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
+        check(consumer == null && consumerStatement == null)
+        consumerStatement = statement
+    }
+
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
+        require(value == consumer)
+        consumer = null
+    }
+
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
+        require(statement == consumerStatement)
+        consumerStatement = null
+    }
+}
+
+actual sealed class StatementExpressionValue : ExpressionValue() {
+    actual abstract fun setLineNumber(line: Int)
+
+    actual val mainStat by lazy { consumerStatement!!.thisRef as StatementExpressionStatement }
+}
+
+actual object TemporaryExpressionValue : Value() {
+    override val type get() = error("not implemented")
+    override val stackType get() = error("not implemented")
+
+    override fun consumeByExpression(value: ValueProperty<*, Value>) {
+        // nop
+    }
+
+    override fun consumeByStatement(statement: ValueProperty<*, Statement>) {
+        // nop
+    }
+
+    override fun unConsumeByExpression(value: ValueProperty<*, Value>) {
+        // nop
+    }
+
+    override fun unConsumeByStatement(statement: ValueProperty<*, Statement>) {
+        // nop
+    }
+}
+
+%%
+package com.anatawa12.decompiler.statementsGen
+
+import com.anatawa12.decompiler.instructions.AllType
+import com.anatawa12.decompiler.instructions.BiOp
+import com.anatawa12.decompiler.instructions.ShiftOp
+import com.anatawa12.decompiler.instructions.StackType
+import com.anatawa12.decompiler.util.*
+import org.objectweb.asm.Handle
+import org.objectweb.asm.Type
+
+expect sealed class Value {
+    var lineNumber: Int
+    val consumes: MutableSet<ValueProperty<*, Value>>
+    val produces: MutableSet<Property<out Variable<*>, Value>>
+
+    abstract val type: Type?
+    abstract val stackType: StackType
+
+    abstract fun consumeByExpression(value: ValueProperty<*, Value>)
+    abstract fun consumeByStatement(statement: ValueProperty<*, Statement>)
+    abstract fun unConsumeByExpression(value: ValueProperty<*, Value>)
+    abstract fun unConsumeByStatement(statement: ValueProperty<*, Statement>)
+
+    inline fun <reified T : Value> prop(value: T, noinline expectedTypeGetter: () -> ExpectTypes): ValueProperty<T, Value>
+    inline fun <reified T : Value> prop(value: T, expectedType: ExpectTypes): ValueProperty<T, Value>
+
+    open fun dispose()
+}
+
+expect sealed class Variable<Producer : IProducer> : Value {
+    abstract val leastType: Class<Producer>
+    abstract fun addProducer(producer: Producer)
+    abstract fun removeProducer(producer: Producer)
+}
+
+expect sealed class IdentifierVariable<Identifier, VariableImpl, Producer>(identifier: Identifier) : Variable<Producer>
+        where Identifier : IdentifierVariableIdentifier<Identifier, VariableImpl, Producer>,
+              VariableImpl : IdentifierVariable<Identifier, VariableImpl, Producer>,
+              Producer : IProducer {
+    var identifier: Identifier
+    open fun mergeImpl(b: VariableImpl): Identifier
+}
+
+expect class LocalVariable : IdentifierVariable<LocalVariableIdentifier, LocalVariable, IProducer> {
+    val index: Int
+    constructor(index: Int, stackType: StackType)
+    constructor(index: Int, type: Type)
+    constructor(identifier: LocalVariableIdentifier)
+    fun merge(b: LocalVariable)
+}
+
+expect class StackVariable : IdentifierVariable<StackVariableIdentifier, StackVariable, IStackProducer> {
+    constructor(stackType: StackType)
+    constructor(type: Type)
+    constructor(identifier: StackVariableIdentifier)
+    fun merge(b: StackVariable)
+    companion object {
+        fun cloneBy(id: StackVariableIdentifier): StackVariable
+        fun cloneBy(id: StackVariable): StackVariable
+    }
+}
+
+expect sealed class ExpressionVariable : Variable<IProducer> {
+    var consumer: ValueProperty<*, Value>?
+    var consumerStatement: ValueProperty<*, Statement>?
+    var producer: IProducer?
+}
+
+expect sealed class ExpressionValue : Value {
+    val anyConsumer: ValueProperty<*, Any>?
+    var consumer: ValueProperty<*, Value>?
+    var consumerStatement: ValueProperty<*, Statement>?
+}
+
+expect sealed class StatementExpressionValue : ExpressionValue {
+    abstract fun setLineNumber(line: Int)
+    val mainStat: StatementExpressionStatement
+}
+
+expect object TemporaryExpressionValue : Value {
+}
+
+%%
+
+#cls ConstantValue exp_val
+  val value any VConstantValue
+  type get value.theType %%
+  stack get value.stackType %%
+#end
+
+#cls ArrayVariable exp_var
+  var ary value object
+  var idx value integer
+  val elementType any AllType
+  type get ary.type?.toString()?.substring(1)?.let { Type.getType(it) } %%
+  stack get elementType.stackType %%
+#end
+
+#cls BiOperation exp_val
+  val op any BiOp
+  var left value type_getter ::computeExpectedOfBiOp %%
+  var right value type_getter ::computeExpectedOfBiOp %%
+  type get computeTypeByStack(stackType, "bi operation") %%
+  stack get sameOrEitherNullOrNull(left.stackType, right.stackType) %%
+
+  verify require(stackType != StackType.Object) %%
+#end
+
+#cls ShiftOperation exp_val
+  val op any ShiftOp
+  var value value type_getter ::computeExpectedOfShiftOp %%
+  var shift value integer
+  type get value.type %%
+  stack get value.stackType %%
+
+  verify require(stackType != StackType.Object) %%
+#end
+
+#cls NegativeOperation exp_val
+  var value value type_getter ::computeExpectedOfNegativeOperation %%
+  type get value.type %%
+  stack get value.stackType %%
+#end
+
+#cls CastValue exp_val
+  val castTo any AllType
+  var value value unknown
+  type get castTo.asmType %%
+  stack get castTo.stackType %%
+#end
+
+#cls LongCompare exp_val
+  var left value long
+  var right value long
+  type integer
+  stack integer
+#end
+
+#cls FloatingCompareLesser exp_val
+  var left value unknown
+  var right value unknown
+
+  type integer
+  stack integer
+#end
+
+#cls FloatingCompareGreater exp_val
+  var left value unknown
+  var right value unknown
+
+  type integer
+  stack integer
+#end
+
+#cls ConditionValue exp_val
+  val condition any BiCondition
+  var left value unknown
+  var right value unknown
+  type boolean
+  stack integer
+#end
+
+#cls StaticField exp_var
+  val owner string
+  val name string
+  val desc string
+  type lazy Type.getType(desc) %%
+  stack lazy StackType.byDesc(desc) %%
+#end
+
+#cls InstanceField exp_var
+  val owner string
+  val name string
+  val desc string
+  var self value object
+  type lazy Type.getType(desc) %%
+  stack lazy StackType.byDesc(desc) %%
+#end
+
+#cls InvokeVirtualValue exp_val
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+  type lazy Type.getReturnType(desc) %%
+  stack lazy StackType.byType(type) %%
+#end
+
+#cls InvokeSpecialValue exp_val
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+  type lazy Type.getReturnType(desc) %%
+  stack lazy StackType.byType(type) %%
+#end
+
+#cls InvokeStaticValue exp_val
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+  type lazy Type.getReturnType(desc) %%
+  stack lazy StackType.byType(type) %%
+#end
+
+#cls InvokeInterfaceValue exp_val
+  val owner string
+  val name string
+  val desc string
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+  type lazy Type.getReturnType(desc) %%
+  stack lazy StackType.byType(type) %%
+#end
+
+#cls InvokeDynamicValue exp_val
+  val name string
+  val descriptor string
+  val bootstrapMethodHandle any Handle
+  val bootstrapMethodArguments any List<Any>
+  val args values types_getter Type.getArgumentTypes(descriptor).map { ExpectTypes.by(it) } %%
+  type lazy Type.getReturnType(descriptor) %%
+  stack lazy StackType.byType(type) %%
+#end
+
+#cls NewObject exp_val
+  val newType any Type
+  type get newType %%
+  stack object
+#end
+
+#cls NewArray exp_val
+  val element any Type
+  var size value integer
+  type lazy Type.getType("[$element") %%
+  stack object
+#end
+
+#cls ArrayLength exp_val
+  var array value object
+  type integer
+  stack integer
+#end
+
+#cls CheckCast exp_val
+  var value value object
+  val castTo any Type
+  type get castTo %%
+  stack object
+#end
+
+#cls InstanceOf exp_val
+  var value value object
+  val classType any Type
+  type boolean
+  stack integer
+#end
+
+#cls MultiANewArray exp_val
+  val arrayType any Type
+  val dimensionSizes values integer
+  type get arrayType %%
+  stack object
+#end
+
+#section-comment java expression variables
+
+#cls NewAndCallConstructor stat_exp_val
+  val owner string
+  val desc string
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+  type lazy Type.getObjectType(owner) %%
+  stack object
+  #src
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
+  #end
+#end
+
+#cls Assign stat_exp_val stack_producer
+  var variable value provide Variable<in Assign>
+  var value value type_getter this.variable.type?.let((ExpectTypes)::by) ?: ExpectTypes.Unknown %%
+  type get sameOrEitherNullOrNull(variable.type, value.type) %%
+  stack get sameOrEitherNullOrNull(variable.stackType, value.stackType) %%
+  #src
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        value.lineNumber = line
+        variable.lineNumber = line
+    }
+  #end
+#end
+
+#cls NewArrayWithInitializerValue stat_exp_val
+  val elementType any Type
+  val arrayInitializer values type_getter ExpectTypes.by(elementType) %%
+  type lazy Type.getType("[$elementType") %%
+  stack object
+  #src
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        arrayInitializer.forEach {
+            it.lineNumber = line
+        }
+    }
+  #end
+#end
+
+#cls BooleanNotValue exp_val
+  var value value boolean
+  type boolean
+  stack integer
+#end
+
+#cls ConditionalOperatorValue exp_val
+  var condition value boolean
+  var ifTrue value type_getter anyConsumer?.expectedType ?: ExpectTypes.Unknown %%
+  var ifFalse value type_getter anyConsumer?.expectedType ?: ExpectTypes.Unknown %%
+  type get sameOrEitherNullOrNull(ifTrue.type, ifFalse.type) %%
+  stack get sameOrEitherNullOrNull(ifTrue.stackType, ifFalse.stackType) %%
+#end
+
+#cls BiOperationAssignedValue stat_exp_val producer
+  val op any BiOp
+  var variable value provide_consumes Variable<in BiOperationAssignedValue>
+  var right value type_getter this.variable.type?.let((ExpectTypes)::by) ?: ExpectTypes.Unknown %%
+  type get sameOrEitherNullOrNull(variable.type, right.type) %%
+  stack get sameOrEitherNullOrNull(variable.stackType, right.stackType) %%
+  #src
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        right.lineNumber = line
+        variable.lineNumber = line
+    }
+  #end
+#end
+
+#cls ShiftOperationAssignedValue stat_exp_val producer
+  val op any ShiftOp
+  var value value provide_consumes Variable<in ShiftOperationAssignedValue>
+  var shift value integer
+  type get value.type %%
+  stack get value.stackType %%
+  #src
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        shift.lineNumber = line
+        value.lineNumber = line
+    }
+  #end
+#end
+
+#cls BooleanAndAndOperation exp_val
+  var left value boolean
+  var right value boolean
+  type boolean
+  stack integer
+#end
+
+#cls BooleanOrOrOperation exp_val
+  var left value boolean
+  var right value boolean
+  type boolean
+  stack integer
+#end
+
+#cls InDecrementValue stat_exp_val producer
+  val inDecrement any InDecrementType
+  var variable value provide_consumes Variable<in InDecrementValue>
+  type get variable.type %%
+  stack get variable.stackType %%
+  #src
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        variable.lineNumber = line
+    }
+  #end
+#end
+
+#cls StaticFieldWithSelf exp_var
+  val owner string
+  val name string
+  val desc string
+  var self value object
+  type lazy Type.getType(desc) %%
+  stack lazy StackType.byDesc(desc) %%
+#end
+
+#cls InvokeStaticWithSelfValue stat_exp_val
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+  type lazy Type.getReturnType(desc) %%
+  stack lazy StackType.byType(type) %%
+  #src
+    override fun setLineNumber(line: Int) {
+        this.lineNumber = line
+        self.lineNumber = line
+        args.forEach {
+            it.lineNumber = line
+        }
+    }
+  #end
+#end
+
+#cls StringContacting exp_val
+  val elements values object
+  type const Type.getType(String::class.java) %%
+  stack object
+#end
+
+#cls NullChecked exp_val
+  var value value object
+  verify check(value.stackType == StackType.Object) %%
+  type get value.type %%
+  stack object
+#end

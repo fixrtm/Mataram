@@ -325,7 +325,7 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
             }
             is StackVariable -> {
                 print("stk" + v.identifier.id)
-                print(v.spInfo())
+                print(v.identifier.spInfo())
             }
             is ConstantValue -> {
                 when (val value = v.value) {
@@ -341,8 +341,8 @@ class PrintingProcessor(private val firstLine: String = "", val showDetailed: Bo
                     is VConstantString -> print("\"${value.string}\"")
                     is VConstantType -> print("${value.type}.class")
                     is VConstantMethodType -> print(value.type)
-                    is VConstantHandle -> print(value.handle)
-                    is VConstantConstantDynamic -> print(value.dynamic)
+                    is VConstantHandle -> print(value)
+                    is VConstantConstantDynamic -> print(value)
                 }
             }
             is ArrayVariable -> {

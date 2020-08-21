@@ -1,0 +1,403 @@
+@file:Suppress("ACTUAL_WITHOUT_EXPECT")
+
+package com.anatawa12.decompiler.statementsGen
+
+import com.anatawa12.decompiler.util.Property
+import com.anatawa12.decompiler.util.PropertyList
+import com.anatawa12.decompiler.util.identitySetOf
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import org.objectweb.asm.Handle
+import org.objectweb.asm.Type
+
+actual sealed class Statement {
+    actual var coreSignature: MethodCoreSignature? = null
+
+    actual var lineNumber: Int = -1
+        private set
+    actual val consumes = mutableSetOf<ValueProperty<*, Statement>>()
+    actual val produces = identitySetOf<Property<out Variable<*>, Statement>>()
+
+    actual open val childBlocks = listOf<BlockBeginStatement>()
+
+    private var labelsTargetsMeBack: PersistentList<StatLabel>? = null
+    actual var labelsTargetsMe: PersistentList<StatLabel>
+        get() = labelsTargetsMeBack ?: error("not initialized")
+        set(value) {
+            if (labelsTargetsMeBack != null)
+                labelsTargetsMeBack!!.forEach { it.at = null }
+            labelsTargetsMeBack = value
+            labelsTargetsMeBack!!.forEach { it.at = this }
+        }
+    private lateinit var prevImpl: Statement
+    private lateinit var nextImpl: Statement
+    actual var prev: Statement
+        get() = prevImpl
+        set(value) { prevImpl = value }
+    actual var next: Statement
+        get() = nextImpl
+        set(value) { nextImpl = value }
+
+    actual abstract override fun equals(other: Any?): Boolean
+    actual abstract override fun hashCode(): Int
+    actual abstract override fun toString(): String
+
+    protected open fun onDispose() {
+        for (consume in consumes) {
+            consume.value.unConsumeByStatement(consume)
+        }
+        labelsTargetsMeBack?.forEach { it.at = null }
+    }
+
+    actual inline fun <reified T : Value> prop(value: T, noinline expectedTypeGetter: () -> ExpectTypes) =
+        prop(value, T::class.java, expectedTypeGetter)
+
+    actual inline fun <reified T : Value> prop(value: T, expectedType: ExpectTypes) =
+        prop(value, T::class.java, { expectedType })
+
+    actual fun <T : Value> prop(value: T, type: Class<T>, expectedTypeGetter: () -> ExpectTypes) =
+        ValueProperty(value, this, type, expectedTypeGetter).also { prop ->
+            consumes += prop
+            value.consumeByStatement(prop)
+            prop.onChange = { from, to ->
+                from.unConsumeByStatement(prop)
+                to.consumeByStatement(prop)
+            }
+        }
+
+    actual fun insertPrev(stat: Statement) {
+        val prev = this.prev
+        prev.next = stat
+        stat.prev = prev
+
+        this.prev = stat
+        stat.next = this
+    }
+
+    actual fun removeMe() {
+        val prev = this.prev
+        val next = this.next
+        prev.next = next
+        next.prev = prev
+
+        dispose(this)
+    }
+
+    actual operator fun get(index: Int): Statement {
+        if (index == 0) return this
+        if (index < 0) {
+            var cur = this
+            repeat(-index) { cur = cur.prev }
+            return cur
+        } else {
+            var cur = this
+            repeat(index) { cur = cur.next }
+            return cur
+        }
+    }
+
+    actual open fun setLineNumber(line: Int) {
+        if (lineNumber != -2)
+            lineNumber = line
+    }
+
+    actual companion object {
+        actual fun dispose(vararg statements: Statement) = dispose(statements.toList())
+        actual fun dispose(statements: List<Statement>) {
+            val first = statements.first()
+            val last = statements.first()
+            check(first.prev.next !== first)
+            check(last.prev.next !== last)
+            for ((prev, next) in statements.toList().zipWithNext()) {
+                check(prev.next == next)
+                check(next.prev == prev)
+            }
+            for (statement in statements) {
+                statement.onDispose()
+            }
+        }
+    }
+}
+
+inline fun <V, reified T> V.mutatingProp(value: T, consumes: Boolean)
+        where V : IProducer, V : Statement, T : Variable<in V> = mutatingProp(value, consumes, T::class.java)
+
+fun <V, T> V.mutatingProp(value: T, consumes: Boolean, type: Class<T>)
+        where V : IProducer, V : Statement, T : Variable<in V> =
+    ValueProperty(value, this, type, { ExpectTypes.Unknown }).also { prop ->
+        if (consumes) this.consumes += prop
+        produces += prop
+        if (consumes) value.consumeByStatement(prop)
+        value.addProducer(this)
+        prop.onChange = { from, to ->
+            if (consumes) from.unConsumeByStatement(prop)
+            from.removeProducer(this)
+            if (consumes) to.consumeByStatement(prop)
+            to.addProducer(this)
+        }
+    }
+
+actual class BlockBeginStatement : Statement(), Iterable<Statement> {
+    init {
+        labelsTargetsMe = persistentListOf()
+        super.setLineNumber(-2)
+    }
+
+    actual fun makeList(): ImmutableList<Statement> = toImmutableList()
+
+    override fun iterator() = object : Iterator<Statement> {
+        var current: Statement = this@BlockBeginStatement
+        override fun hasNext(): Boolean = current !is BlockEndStatement
+
+        override fun next(): Statement {
+            if (current is BlockEndStatement)
+                throw NoSuchElementException()
+            current = current.next
+            return current
+        }
+    }
+
+    override fun equals(other: Any?): Boolean = this === other
+
+    override fun hashCode(): Int = System.identityHashCode(this)
+
+    override fun toString(): String = "MethodBeginStatement"
+
+    actual companion object {
+        actual fun makeBlockByBeginEnd(begin: Statement, end: Statement): Pair<BlockBeginStatement, BlockEndStatement> {
+            val beginStat = BlockBeginStatement()
+            val endStat = BlockEndStatement()
+            begin.prev.next = end.next
+            end.next.prev = begin.prev
+
+            begin.prev = beginStat
+            beginStat.next = begin
+
+            endStat.prev = end
+            end.next = endStat
+
+            return beginStat to endStat
+        }
+    }
+}
+
+actual class BlockEndStatement : Statement() {
+    init {
+        labelsTargetsMe = persistentListOf()
+        super.setLineNumber(-2)
+    }
+
+    override fun equals(other: Any?): Boolean = this === other
+
+    override fun hashCode(): Int = System.identityHashCode(this)
+
+    override fun toString(): String = "MethodEndStatement"
+}
+%%
+@file:Suppress("NO_ACTUAL_FOR_EXPECT")
+
+package com.anatawa12.decompiler.statementsGen
+
+import com.anatawa12.decompiler.util.Property
+import com.anatawa12.decompiler.util.PropertyList
+import com.anatawa12.decompiler.util.identitySetOf
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import org.objectweb.asm.Handle
+import org.objectweb.asm.Type
+
+expect sealed class Statement() {
+    var coreSignature: MethodCoreSignature?
+    var lineNumber: Int
+        private set
+    val consumes: MutableSet<ValueProperty<*, Statement>>
+    val produces: MutableSet<Property<out Variable<*>, Statement>>
+    open val childBlocks: List<BlockBeginStatement>
+    var labelsTargetsMe: PersistentList<StatLabel>
+    actual var prev: Statement
+    actual var next: Statement
+
+    abstract override fun equals(other: Any?): Boolean
+    abstract override fun hashCode(): Int
+    abstract override fun toString(): String
+
+    inline fun <reified T : Value> prop(value: T, noinline expectedTypeGetter: () -> ExpectTypes): ValueProperty<T, Statement>
+    inline fun <reified T : Value> prop(value: T, expectedType: ExpectTypes): ValueProperty<T, Statement>
+    fun <T : Value> prop(value: T, type: Class<T>, expectedTypeGetter: () -> ExpectTypes): ValueProperty<T, Statement>
+    fun insertPrev(stat: Statement)
+    fun removeMe()
+    operator fun get(index: Int): Statement
+    open fun setLineNumber(line: Int)
+    companion object {
+        fun dispose(vararg statements: Statement)
+        fun dispose(statements: List<Statement>)
+    }
+}
+
+expect class BlockBeginStatement() : Statement, Iterable<Statement> {
+    fun makeList(): ImmutableList<Statement>
+
+    companion object {
+        fun makeBlockByBeginEnd(begin: Statement, end: Statement): Pair<BlockBeginStatement, BlockEndStatement>
+    }
+}
+
+expect class BlockEndStatement() : Statement
+
+%%
+
+#cls StatementExpressionStatement no_line
+  var expression value unknown StatementExpressionValue
+#end
+
+#cls ConditionalGoto label_consumer
+  var value value boolean
+  val label label
+#end
+
+#cls Goto label_consumer
+  val label label
+#end
+
+#cls Jsr label_consumer
+  val label label
+#end
+
+#cls Ret
+  val variable value LocalVariable
+#end
+
+#cls TableSwitch label_consumer
+  val min int
+  val max int
+  val default label
+  val labels labels
+  var value value integer
+#end
+
+#cls LookupSwitch label_consumer
+  val default label
+  val pairs int_label_pairs
+  var value value integer
+#end
+
+#cls ReturnValue
+  var variable value type_getter coreSignature?.let { ExpectTypes.by(Type.getReturnType(it.desc)) } ?: ExpectTypes.Unknown %%
+#end
+
+#cls ReturnVoid
+#end
+
+#cls InvokeVirtualVoid
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+#end
+
+#cls InvokeSpecialVoid
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+#end
+
+#cls InvokeStaticVoid
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+#end
+
+#cls InvokeInterfaceVoid
+  val owner string
+  val name string
+  val desc string
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+#end
+
+#cls InvokeDynamicVoid
+  val name string
+  val descriptor string
+  val bootstrapMethodHandle any Handle
+  val bootstrapMethodArguments any List<Any>
+  val args values types_getter Type.getArgumentTypes(descriptor).map { ExpectTypes.by(it) } %%
+#end
+
+#cls ThrowException
+  var throws value object
+#end
+
+#cls MonitorEnter
+  var monitorObj value object
+#end
+
+#cls MonitorExit
+  var monitorObj value object
+#end
+
+#section-comment try-catch
+
+#cls TryBlockStart no_line
+  val identifier any TryCatchBlockIdentifier
+#end
+
+#cls TryBlockEnd no_line
+  val identifier any TryCatchBlockIdentifier
+#end
+
+#cls CatchBlockStart stack_producer no_line
+  val identifier any TryCatchBlockIdentifier
+  var catchVariable value provide IdentifierVariable<*, *, in CatchBlockStart>
+#end
+
+#section-comment java expression
+
+#cls InvokeStaticWithSelfVoid
+  val owner string
+  val name string
+  val desc string
+  val isInterface boolean
+  var self value object
+  val args values types_getter Type.getArgumentTypes(desc).map { ExpectTypes.by(it) } %%
+#end
+
+#section-comment java control flow
+
+#src
+actual sealed class JavaControlFlowStatement : Statement() {
+    abstract override val childBlocks: List<BlockBeginStatement>
+}
+%%
+expect sealed class JavaControlFlowStatement
+#end
+
+#cls IfElseControlFlow flow no_line
+  var condition value boolean
+  val thenBlock block_begin
+  val elseBlock block_begin
+  val breakLabel label unused
+#end
+
+#cls WhileControlFlow flow no_line
+  var condition value boolean
+  val block block_begin
+  val continueLabel label unused
+  val breakLabel label unused
+#end
+
+#cls SynchronizedFlow flow no_line
+  var monitorObj value object
+  val block block_begin
+  val breakLabel label unused
+#end

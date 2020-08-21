@@ -1,0 +1,5 @@
+statement src/main/generated/Statements.generated.kt decl_actual templates/statement_template.txt
+
+expression src/main/generated/Expressions.generated.kt decl_actual templates/expression_template.txt
+
+statement_comparator src/main/generated/Comparator.generated.kt templates/statement_template.txt templates/expression_template.txt templates/comparator_template.txt
